@@ -1,58 +1,77 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Atış Hareketleri Simülasyonu (g=10)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Atış Hareketleri Simülasyonu (g = 10)</title>
   <style>
-    body{margin:0; background:#0f172a; color:#e5e7eb; font-family:Arial, sans-serif;}
-    header{padding:16px; text-align:center; font-weight:bold; border-bottom:1px solid #1f2937;}
-    .wrap{display:grid; grid-template-columns:1.1fr 0.9fr; gap:16px; padding:16px;}
-    .card{background:#111827; border:1px solid #1f2937; border-radius:10px; padding:12px;}
-    canvas{display:block; width:100%; height:400px; background:#0b1222; border:1px solid #1f2937; border-radius:10px;}
-    label{display:block; margin:10px 0 6px; color:#9ca3af; font-size:14px;}
-    input,select{width:100%; padding:8px; border-radius:8px; border:1px solid #374151; background:#0b1222; color:#e5e7eb;}
+    :root{
+      --bg:#0f172a; --card:#111827; --border:#1f2937; --ink:#e5e7eb; --muted:#9ca3af;
+      --canvas:#0b1222; --ground:#0a3; --groundLine:#34d399; --accent:#60a5fa; --ball:#fbbf24;
+    }
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--ink); font-family:Inter, Arial, sans-serif;}
+    header{padding:16px; text-align:center; font-weight:700; border-bottom:1px solid var(--border);}
+    .wrap{display:grid; grid-template-columns:1.15fr 0.85fr; gap:16px; padding:16px; box-sizing:border-box;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px; box-sizing:border-box;}
+    h2{margin:0 0 8px 0; font-size:16px;}
+    /* Canvas container ensures canvas has CSS size while JS sets pixel size */
+    .canvas-wrap{width:100%; height:420px; display:block;}
+    canvas{display:block; width:100%; height:100%; background:var(--canvas); border-radius:8px; border:1px solid var(--border);}
+    label{display:block; margin:10px 0 6px; color:var(--muted); font-size:13px;}
+    input[type="number"], select{width:100%; padding:8px; border-radius:8px; border:1px solid #374151; background:transparent; color:var(--ink); box-sizing:border-box;}
+    .row{display:flex; gap:8px;}
+    .row > *{flex:1;}
     .btns{display:flex; gap:8px; margin-top:10px;}
-    button{padding:8px 12px; border-radius:8px; border:1px solid #374151; background:#10223a; color:#e5e7eb; cursor:pointer;}
+    button{padding:8px 12px; border-radius:8px; border:1px solid #374151; background:#10223a; color:var(--ink); cursor:pointer; user-select:none;}
     .data{display:flex; flex-wrap:wrap; gap:12px; margin-top:12px;}
-    .kv{background:#0b1222; border:1px solid #1f2937; border-radius:8px; padding:6px 10px; min-width:120px;}
+    .kv{background:transparent; border:1px solid var(--border); border-radius:8px; padding:8px 10px; min-width:120px; color:var(--ink);}
+    /* Ensure no invisible overlay blocks clicks */
+    .card, .card *{pointer-events:auto;}
+    /* Small responsive tweaks */
+    @media (max-width:800px){
+      .wrap{grid-template-columns:1fr; padding:12px;}
+      .canvas-wrap{height:320px;}
+    }
   </style>
 </head>
 <body>
-  <header>Atış Hareketleri Simülasyonu (g = 10 m/s²)</header>
+  <header>Atış Hareketleri Simülasyonu — g = 10 m/s²</header>
 
   <div class="wrap">
     <div class="card">
       <h2>Görünüm</h2>
-      <canvas id="scene" width="900" height="400"></canvas>
+      <div class="canvas-wrap">
+        <canvas id="scene" width="900" height="420" aria-label="Atış simülasyonu"></canvas>
+      </div>
     </div>
 
     <div class="card">
       <h2>Kontrol Paneli</h2>
-      <label>Atış tipi</label>
-      <select id="type">
+
+      <label for="type">Atış tipi</label>
+      <select id="type" aria-label="Atış tipi">
         <option value="inclined">Eğik Atış</option>
         <option value="horizontal">Yatay Atış</option>
         <option value="verticalUp">Yukarı Düşey</option>
         <option value="verticalDown">Aşağı Düşey</option>
       </select>
 
-      <label>İlk hız v₀ (m/s)</label>
-      <input type="number" id="v0" value="25" step="any">
+      <label for="v0">İlk hız v₀ (m/s)</label>
+      <input id="v0" type="number" step="any" value="25" aria-label="İlk hız">
 
-      <label>Açı θ (derece)</label>
-      <input type="number" id="angle" value="53" step="any">
+      <label for="angle">Açı θ (derece)</label>
+      <input id="angle" type="number" step="any" value="53" aria-label="Açı">
 
-      <label>Başlangıç yüksekliği h₀ (m)</label>
-      <input type="number" id="h0" value="0" step="any">
+      <label for="h0">Başlangıç yüksekliği h₀ (m)</label>
+      <input id="h0" type="number" step="any" value="0" aria-label="Başlangıç yüksekliği">
 
-      <div class="btns">
+      <div class="btns" style="margin-top:12px;">
         <button id="startBtn" type="button">Başlat</button>
         <button id="pauseBtn" type="button">Duraklat</button>
         <button id="resetBtn" type="button">Sıfırla</button>
       </div>
 
-      <div class="data">
+      <div class="data" aria-live="polite">
         <div class="kv">t: <span id="tVal">0.00 s</span></div>
         <div class="kv">x: <span id="xVal">0.00 m</span></div>
         <div class="kv">y: <span id="yVal">0.00 m</span></div>
@@ -63,109 +82,240 @@
   </div>
 
 <script>
-const g=10;
-let v0=25, angleDeg=53, h0=0;
-let t=0, dt=0.02;
-let running=false, paused=false;
-let path=[];
+/* Tam çalışan tek dosya simülasyonu
+   - g sabit: 10 m/s^2
+   - canvas DPI düzeltme, resize handling
+   - start / pause / reset çalışır
+   - atış tipi seçildiğinde açı otomatik kilitlenir
+*/
 
-const scene=document.getElementById('scene');
-const ctx=scene.getContext('2d');
+(() => {
+  const g = 10; // sabit yerçekimi
 
-const typeEl=document.getElementById('type');
-const v0El=document.getElementById('v0');
-const angleEl=document.getElementById('angle');
-const h0El=document.getElementById('h0');
-const startBtn=document.getElementById('startBtn');
-const pauseBtn=document.getElementById('pauseBtn');
-const resetBtn=document.getElementById('resetBtn');
-const tVal=document.getElementById('tVal');
-const xVal=document.getElementById('xVal');
-const yVal=document.getElementById('yVal');
-const vxVal=document.getElementById('vxVal');
-const vyVal=document.getElementById('vyVal');
+  // DOM elemanları
+  const scene = document.getElementById('scene');
+  const ctx = scene.getContext('2d');
 
-function deg2rad(d){return d*Math.PI/180;}
-function format(n,u){return n.toFixed(2)+' '+u;}
+  const typeEl = document.getElementById('type');
+  const v0El = document.getElementById('v0');
+  const angleEl = document.getElementById('angle');
+  const h0El = document.getElementById('h0');
 
-function initialVX(){
-  const th=deg2rad(angleDeg);
-  switch(typeEl.value){
-    case 'inclined': return v0*Math.cos(th);
-    case 'horizontal': return v0;
-    default: return 0;
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const tVal = document.getElementById('tVal');
+  const xVal = document.getElementById('xVal');
+  const yVal = document.getElementById('yVal');
+  const vxVal = document.getElementById('vxVal');
+  const vyVal = document.getElementById('vyVal');
+
+  // Durum
+  let v0 = parseFloat(v0El.value) || 0;
+  let angleDeg = parseFloat(angleEl.value) || 0;
+  let h0 = parseFloat(h0El.value) || 0;
+
+  let t = 0;
+  const dt = 0.02;
+  let running = false;
+  let paused = false;
+  let path = []; // {t,x,y,vx,vy}
+
+  // DPI / pixel fix: canvas CSS size -> pixel size
+  function fixCanvasDPI(){
+    const dpr = window.devicePixelRatio || 1;
+    // Use clientWidth/clientHeight (CSS pixels) to set actual pixel size
+    const cssW = scene.clientWidth;
+    const cssH = scene.clientHeight;
+    scene.width = Math.max(300, Math.floor(cssW * dpr));
+    scene.height = Math.max(150, Math.floor(cssH * dpr));
+    // scale drawing operations to CSS pixels
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-}
-function initialVY(){
-  const th=deg2rad(angleDeg);
-  switch(typeEl.value){
-    case 'inclined': return v0*Math.sin(th);
-    case 'horizontal': return 0;
-    case 'verticalUp': return v0;
-    case 'verticalDown': return -v0;
+
+  // Helpers
+  function deg2rad(d){ return d * Math.PI / 180; }
+  function format(n, u){ return (isFinite(n) ? n.toFixed(2) : '—') + ' ' + u; }
+
+  // Initial velocity components depending on type
+  function initialVX(){
+    const th = deg2rad(angleDeg);
+    const type = typeEl.value;
+    if(type === 'inclined') return v0 * Math.cos(th);
+    if(type === 'horizontal') return v0;
+    return 0;
   }
-}
-
-function applyTypeAngleLock(){
-  const type=typeEl.value;
-  angleEl.disabled=false;
-  if(type==='horizontal'){angleDeg=0; angleEl.value=0; angleEl.disabled=true;}
-  if(type==='verticalUp'){angleDeg=90; angleEl.value=90; angleEl.disabled=true;}
-  if(type==='verticalDown'){angleDeg=-90; angleEl.value=-90; angleEl.disabled=true;}
-}
-
-function step(){
-  if(!running||paused) return;
-  const vx0=initialVX();
-  const vy0=initialVY();
-  t+=dt;
-  const x=vx0*t;
-  const y=h0+vy0*t-0.5*g*t*t;
-  const vx=vx0;
-  const vy=vy0-g*t;
-  if(y<=0){
-    path.push({t,x,y:0,vx,vy});
-    running=false;
-  } else {
-    path.push({t,x,y,vx,vy});
+  function initialVY(){
+    const th = deg2rad(angleDeg);
+    const type = typeEl.value;
+    if(type === 'inclined') return v0 * Math.sin(th);
+    if(type === 'horizontal') return 0;
+    if(type === 'verticalUp') return v0;
+    if(type === 'verticalDown') return -v0;
+    return 0;
   }
-}
 
-function draw(){
-  const w=scene.width, h=scene.height;
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle='#0a3';
-  ctx.fillRect(0,h-40,w,40);
-  ctx.strokeStyle='#34d399';
-  ctx.beginPath(); ctx.moveTo(0,h-40); ctx.lineTo(w,h-40); ctx.stroke();
-  if(path.length){
-    ctx.strokeStyle='#60a5fa';
-    ctx.beginPath();
-    ctx.moveTo(60+path[0].x*6,(h-40)-path[0].y*6);
-    for(const p of path){
-      ctx.lineTo(60+p.x*6,(h-40)-p.y*6);
+  // Atış tipi seçildiğinde açı kilitleme/ayarlama
+  function applyTypeAngleLock(){
+    const type = typeEl.value;
+    angleEl.disabled = false;
+    if(type === 'horizontal'){ angleDeg = 0; angleEl.value = 0; angleEl.disabled = true; }
+    else if(type === 'verticalUp'){ angleDeg = 90; angleEl.value = 90; angleEl.disabled = true; }
+    else if(type === 'verticalDown'){ angleDeg = -90; angleEl.value = -90; angleEl.disabled = true; }
+  }
+
+  // Fizik adımı
+  function step(){
+    if(!running || paused) return;
+    const vx0 = initialVX();
+    const vy0 = initialVY();
+
+    t += dt;
+    const x = vx0 * t;
+    const y = h0 + vy0 * t - 0.5 * g * t * t;
+    const vx = vx0;
+    const vy = vy0 - g * t;
+
+    if(y <= 0){
+      path.push({t, x, y: 0, vx, vy});
+      running = false; // yere çarptı
+    } else {
+      path.push({t, x, y, vx, vy});
     }
-    ctx.stroke();
-    const last=path[path.length-1];
-    ctx.fillStyle='#fbbf24';
-    ctx.beginPath();
-    ctx.arc(60+last.x*6,(h-40)-last.y*6,6,0,Math.PI*2);
-    ctx.fill();
   }
-  const last=path[path.length-1]||{t:0,x:0,y:0,vx:0,vy:0};
-  tVal.textContent=format(last.t,'s');
-  xVal.textContent=format(last.x,'m');
-  yVal.textContent=format(last.y,'m');
-  vxVal.textContent=format(last.vx,'m/s');
-  vyVal.textContent=format(last.vy,'m/s');
-}
 
-startBtn.addEventListener('click',()=>{
-  v0=parseFloat(v0El.value)||0;
-  h0=parseFloat(h0El.value)||0;
-  angleDeg=parseFloat(angleEl.value)||0;
+  // Çizim
+  function draw(){
+    fixCanvasDPI();
+    // Use CSS width/height for drawing coordinates
+    const cssW = scene.clientWidth;
+    const cssH = scene.clientHeight;
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    // Ground
+    ctx.fillStyle = '#0a3';
+    ctx.fillRect(0, cssH - 40, cssW, 40);
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, cssH - 40); ctx.lineTo(cssW, cssH - 40); ctx.stroke();
+
+    // If no path yet, draw initial ball on ground at start
+    if(path.length === 0){
+      // initial ball at x=60, y = h0
+      const cx0 = 60;
+      const cy0 = (cssH - 40) - Math.max(0, h0) * 6;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(cx0, cy0, 6, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Trajectory and ball
+    if(path.length){
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const p0 = path[0];
+      ctx.moveTo(60 + p0.x * 6, (cssH - 40) - p0.y * 6);
+      for(const p of path){
+        ctx.lineTo(60 + p.x * 6, (cssH - 40) - p.y * 6);
+      }
+      ctx.stroke();
+
+      const last = path[path.length - 1];
+      const cx = 60 + last.x * 6;
+      const cy = (cssH - 40) - last.y * 6;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Update readouts
+    const last = path[path.length - 1] || {t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()};
+    tVal.textContent = format(last.t, 's');
+    xVal.textContent = format(last.x, 'm');
+    yVal.textContent = format(last.y, 'm');
+    vxVal.textContent = format(last.vx, 'm/s');
+    vyVal.textContent = format(last.vy, 'm/s');
+  }
+
+  // Main loop
+  function loop(){
+    step();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Event bindings
+  // Ensure angle lock updates immediately when type changes
+  typeEl.addEventListener('change', () => {
+    applyTypeAngleLock();
+    // update local angleDeg from input (in case)
+    angleDeg = parseFloat(angleEl.value) || angleDeg;
+    draw();
+  });
+
+  // Keep angleDeg in sync if user edits angle (only when enabled)
+  angleEl.addEventListener('input', () => {
+    if(!angleEl.disabled){
+      angleDeg = parseFloat(angleEl.value) || 0;
+    }
+  });
+
+  // Start
+  startBtn.addEventListener('click', () => {
+    v0 = parseFloat(v0El.value) || 0;
+    h0 = parseFloat(h0El.value) || 0;
+    angleDeg = parseFloat(angleEl.value) || angleDeg;
+    applyTypeAngleLock();
+
+    t = 0;
+    path = [{t:0, x:0, y:h0, vx: initialVX(), vy: initialVY()}];
+    running = true;
+    paused = false;
+    pauseBtn.textContent = 'Duraklat';
+  });
+
+  // Pause / resume
+  pauseBtn.addEventListener('click', () => {
+    if(!running) return;
+    paused = !paused;
+    pauseBtn.textContent = paused ? 'Devam' : 'Duraklat';
+  });
+
+  // Reset
+  resetBtn.addEventListener('click', () => {
+    typeEl.value = 'inclined';
+    v0El.value = 25;
+    angleEl.value = 53;
+    h0El.value = 0;
+
+    v0 = 25; angleDeg = 53; h0 = 0;
+    t = 0; running = false; paused = false;
+    pauseBtn.textContent = 'Duraklat';
+    path = [];
+    applyTypeAngleLock();
+    draw();
+  });
+
+  // Resize handling: keep canvas DPI correct on resize
+  let resizeTimer = null;
+  function handleResize(){
+    // small debounce
+    if(resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      fixCanvasDPI();
+      draw();
+    }, 60);
+  }
+  window.addEventListener('resize', handleResize);
+
+  // Initial setup
   applyTypeAngleLock();
-  t=0;
-  path=[{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
-  running=true; paused=false;
-  pause
+  path = []; // start with empty path so initial ball drawn
+  fixCanvasDPI();
+  draw();
+  loop();
+
+})();
+</script>
+</body>
+</html>
