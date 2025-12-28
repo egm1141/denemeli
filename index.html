@@ -1,22 +1,41 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Atış Hareketleri Simülasyonu (g=10)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body{margin:0; background:#0f172a; color:#e5e7eb; font-family:Arial, sans-serif;}
-    header{padding:16px; text-align:center; font-weight:bold; border-bottom:1px solid #1f2937;}
+    :root{
+      --bg:#0f172a; --card:#111827; --border:#1f2937; --ink:#e5e7eb; --muted:#9ca3af;
+      --canvas:#0b1222; --accent:#60a5fa; --ground:#0a3; --groundLine:#34d399; --point:#fbbf24;
+    }
+    html,body{margin:0; background:var(--bg); color:var(--ink); font-family:Arial, sans-serif;}
+    header{padding:16px; text-align:center; font-weight:bold; border-bottom:1px solid var(--border);}
     .wrap{display:grid; grid-template-columns:1.1fr 0.9fr; gap:16px; padding:16px;}
-    .card{background:#111827; border:1px solid #1f2937; border-radius:10px; padding:12px;}
-    canvas{width:100%; height:300px; background:#0b1222; border:1px solid #1f2937; border-radius:10px;}
-    label{display:block; margin:8px 0 4px;}
-    input,select,button{width:100%; margin-bottom:8px; padding:6px; border-radius:8px; border:1px solid #374151; background:#0b1222; color:#e5e7eb;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px;}
+    h2{margin:0 0 8px 0; font-size:18px;}
+    canvas{width:100%; height:360px; background:var(--canvas); border:1px solid var(--border); border-radius:10px;}
+    label{display:block; margin:10px 0 6px; color:var(--muted); font-size:14px;}
+    input[type="number"], select{width:100%; padding:8px; border-radius:8px; border:1px solid #374151; background:var(--canvas); color:var(--ink);}
+    .row{display:flex; gap:8px;}
+    .row > *{flex:1;}
+    .btns{display:flex; gap:8px; margin-top:10px;}
+    button{padding:8px 12px; border-radius:8px; border:1px solid #374151; background:#10223a; color:var(--ink); cursor:pointer;}
+    .speed{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; align-items:center;}
+    .speed button{padding:6px 10px;}
+    .speed .label{color:var(--muted); font-size:14px;}
+    .checks{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px;}
+    .checks label{display:flex; align-items:center; gap:8px; cursor:pointer;}
     .data{display:flex; flex-wrap:wrap; gap:12px; margin-top:12px;}
-    .kv{background:#0b1222; border:1px solid #1f2937; border-radius:8px; padding:6px 10px;}
+    .kv{background:var(--canvas); border:1px solid var(--border); border-radius:8px; padding:6px 10px; min-width:120px;}
+    .disabled{opacity:0.6; pointer-events:none;}
+    .pill{padding:6px 10px; border-radius:999px; border:1px solid #374151; background:#0b1222; color:var(--ink); display:inline-flex; align-items:center; gap:8px;}
+    .pill .dot{width:10px; height:10px; border-radius:50%;}
+    .dot-earth{background:#34d399;}
   </style>
 </head>
 <body>
-  <header>Atış Hareketleri Simülasyonu (g = 10 m/s²)</header>
+  <header>Atış Hareketleri Simülasyonu</header>
 
   <div class="wrap">
     <!-- Sol: Görünüm -->
@@ -25,27 +44,66 @@
       <canvas id="scene"></canvas>
     </div>
 
-    <!-- Sağ: Kontrol paneli -->
+    <!-- Sağ: Kontrol Paneli -->
     <div class="card">
       <h2>Kontrol Paneli</h2>
+
       <label>Atış tipi</label>
       <select id="type">
-        <option value="inclined">Eğik atış</option>
-        <option value="horizontal">Yatay atış</option>
-        <option value="verticalUp">Yukarı düşey</option>
-        <option value="verticalDown">Aşağı düşey</option>
+        <option value="inclined">Eğik Atış</option>
+        <option value="horizontal">Yatay Atış</option>
+        <option value="verticalUp">Yukarı Düşey</option>
+        <option value="verticalDown">Aşağı Düşey</option>
       </select>
-      <label>İlk hız (V₀)</label>
-      <input type="number" id="v0" value="20">
+
+      <div class="row">
+        <div>
+          <label>İlk Hız (V₀)</label>
+          <input type="number" id="v0" value="25" min="0" step="1" />
+        </div>
+        <div>
+          <label>Yükseklik (h)</label>
+          <input type="number" id="h0" value="0" min="0" step="1" />
+        </div>
+      </div>
+
       <label>Açı (θ)</label>
-      <input type="number" id="angle" value="45">
-      <label>Yükseklik (h)</label>
-      <input type="number" id="h0" value="0">
-      <div style="margin-top:8px">
+      <input type="number" id="angle" value="53" min="0" max="90" step="1" />
+      <div class="row" style="margin-top:8px">
+        <button class="preset" data-angle="30">30°</button>
+        <button class="preset" data-angle="37">37°</button>
+        <button class="preset" data-angle="45">45°</button>
+        <button class="preset" data-angle="53">53°</button>
+        <button class="preset" data-angle="60">60°</button>
+      </div>
+
+      <label>Yerçekimi (g)</label>
+      <div class="pill">
+        <span class="dot dot-earth"></span>
+        <span>🌍 Dünya</span>
+        <strong style="margin-left:auto">10 m/s²</strong>
+      </div>
+      <div class="disabled" style="margin-top:6px; font-size:12px; color:var(--muted)">g sabit: değiştirilemez</div>
+
+      <div class="checks">
+        <label><input type="checkbox" id="showV" /> Hız Vektörü (v)</label>
+        <label><input type="checkbox" id="showVComp" /> Hız Bileşenleri (vx, vy)</label>
+        <label><input type="checkbox" id="showA" /> İvme Vektörü (g)</label>
+        <label><input type="checkbox" id="showTrail" /> Yol izini göster</label>
+      </div>
+
+      <div class="btns">
         <button id="startBtn">Başlat</button>
-        <button id="pauseBtn">Duraklat</button>
         <button id="resetBtn">Sıfırla</button>
       </div>
+
+      <div class="speed">
+        <span class="label">Hız:</span>
+        <button class="speedBtn" data-mul="0.5">0.5 x</button>
+        <button class="speedBtn active" data-mul="1">1 x</button>
+        <button class="speedBtn" data-mul="2">2 x</button>
+      </div>
+
       <div class="data">
         <div class="kv">t: <span id="tVal">0.00 s</span></div>
         <div class="kv">x: <span id="xVal">0.00 m</span></div>
@@ -57,92 +115,234 @@
   </div>
 
 <script>
-const g=10; // sabit yerçekimi
+  // Sabit yerçekimi
+  const g = 10;
 
-let v0=20, angleDeg=45, h0=0;
-let t=0, dt=0.02;
-let running=false, paused=false;
-let path=[];
+  // Durum
+  let v0 = 25, angleDeg = 53, h0 = 0;
+  let type = 'inclined';
+  let t = 0, dt = 0.02, speedMul = 1;
+  let running = false;
+  let path = []; // {t,x,y,vx,vy}
+  let showV = false, showVComp = false, showA = false, showTrail = false;
 
-const v0El=document.getElementById('v0');
-const angleEl=document.getElementById('angle');
-const h0El=document.getElementById('h0');
-const typeEl=document.getElementById('type');
-const startBtn=document.getElementById('startBtn');
-const pauseBtn=document.getElementById('pauseBtn');
-const resetBtn=document.getElementById('resetBtn');
-const tVal=document.getElementById('tVal');
-const xVal=document.getElementById('xVal');
-const yVal=document.getElementById('yVal');
-const vxVal=document.getElementById('vxVal');
-const vyVal=document.getElementById('vyVal');
+  // Elemanlar
+  const scene = document.getElementById('scene');
+  const ctx = scene.getContext('2d');
 
-function deg2rad(d){return d*Math.PI/180;}
-function format(n,u){return n.toFixed(2)+' '+u;}
+  const typeEl = document.getElementById('type');
+  const v0El = document.getElementById('v0');
+  const h0El = document.getElementById('h0');
+  const angleEl = document.getElementById('angle');
+  const presetBtns = document.querySelectorAll('.preset');
 
-function init(){
-  v0=parseFloat(v0El.value)||0;
-  angleDeg=parseFloat(angleEl.value)||0;
-  h0=parseFloat(h0El.value)||0;
-  t=0;
-  path=[{t:0,x:0,y:h0,vx:v0*Math.cos(deg2rad(angleDeg)),vy:v0*Math.sin(deg2rad(angleDeg))}];
-  running=false; paused=false;
-  pauseBtn.textContent='Duraklat';
-  drawScene();
-}
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
 
-function step(){
-  if(!running||paused) return;
-  const theta=deg2rad(angleDeg);
-  let v0x=0,v0y=0;
-  switch(typeEl.value){
-    case 'inclined': v0x=v0*Math.cos(theta); v0y=v0*Math.sin(theta); break;
-    case 'horizontal': v0x=v0; v0y=0; break;
-    case 'verticalUp': v0x=0; v0y=v0; break;
-    case 'verticalDown': v0x=0; v0y=-v0; break;
-  }
-  t+=dt;
-  const x=v0x*t;
-  const y=h0+v0y*t-0.5*g*t*t;
-  const vx=v0x;
-  const vy=v0y-g*t;
-  if(y<=0){
-    path.push({t,x,y:0,vx,vy});
-    running=false;
-  } else {
-    path.push({t,x,y,vx,vy});
-  }
-  tVal.textContent=format(t,'s');
-  xVal.textContent=format(x,'m');
-  yVal.textContent=format(Math.max(0,y),'m');
-  vxVal.textContent=format(vx,'m/s');
-  vyVal.textContent=format(vy,'m/s');
-  drawScene();
-}
+  const speedBtns = document.querySelectorAll('.speedBtn');
 
-function drawScene(){
-  const ctx=document.getElementById('scene').getContext('2d');
-  const w=ctx.canvas.width,h=ctx.canvas.height;
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle='#0a3'; ctx.fillRect(0,h-40,w,40);
-  ctx.strokeStyle='#34d399'; ctx.beginPath(); ctx.moveTo(0,h-40); ctx.lineTo(w,h-40); ctx.stroke();
-  if(path.length){
-    ctx.strokeStyle='#60a5fa'; ctx.beginPath();
-    ctx.moveTo(60+path[0].x*6,(h-40)-path[0].y*6);
-    for(const p of path){
-      ctx.lineTo(60+p.x*6,(h-40)-p.y*6);
+  const tVal = document.getElementById('tVal');
+  const xVal = document.getElementById('xVal');
+  const yVal = document.getElementById('yVal');
+  const vxVal = document.getElementById('vxVal');
+  const vyVal = document.getElementById('vyVal');
+
+  const showVEl = document.getElementById('showV');
+  const showVCompEl = document.getElementById('showVComp');
+  const showAEl = document.getElementById('showA');
+  const showTrailEl = document.getElementById('showTrail');
+
+  // Yardımcılar
+  function deg2rad(d){ return d * Math.PI / 180; }
+  function format(n,u){ return (isFinite(n)? n.toFixed(2): '—') + ' ' + u; }
+
+  // Başlat/Sıfırla
+  startBtn.addEventListener('click', ()=>{
+    v0 = parseFloat(v0El.value)||0;
+    h0 = parseFloat(h0El.value)||0;
+    angleDeg = parseFloat(angleEl.value)||0;
+    type = typeEl.value;
+
+    t = 0;
+    path = [{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
+    running = true;
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    v0El.value = 25; h0El.value = 0; angleEl.value = 53; typeEl.value = 'inclined';
+    speedMul = 1; speedBtns.forEach(b=>b.classList.toggle('active', b.dataset.mul==='1'));
+    showVEl.checked = false; showVCompEl.checked = false; showAEl.checked = false; showTrailEl.checked = false;
+    showV = showVComp = showA = showTrail = false;
+    t = 0; running = false;
+    path = [{t:0,x:0,y:0,vx:0,vy:0}];
+  });
+
+  // Hız çarpanı
+  speedBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      speedBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      speedMul = parseFloat(btn.dataset.mul);
+    });
+  });
+
+  // Açı presetleri
+  presetBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      angleEl.value = btn.dataset.angle;
+    });
+  });
+
+  // Vektör seçenekleri
+  showVEl.addEventListener('change', ()=> showV = showVEl.checked);
+  showVCompEl.addEventListener('change', ()=> showVComp = showVCompEl.checked);
+  showAEl.addEventListener('change', ()=> showA = showAEl.checked);
+  showTrailEl.addEventListener('change', ()=> showTrail = showTrailEl.checked);
+
+  // İlk hız bileşenleri türüne göre
+  function initialVX(){
+    const th = deg2rad(angleDeg);
+    switch(type){
+      case 'inclined': return v0 * Math.cos(th);
+      case 'horizontal': return v0;
+      case 'verticalUp': return 0;
+      case 'verticalDown': return 0;
     }
-    ctx.stroke();
-    const last=path[path.length-1];
-    ctx.fillStyle='#fbbf24';
-    ctx.beginPath(); ctx.arc(60+last.x*6,(h-40)-last.y*6,6,0,Math.PI*2);
-    ctx.fill();
   }
-}
+  function initialVY(){
+    const th = deg2rad(angleDeg);
+    switch(type){
+      case 'inclined': return v0 * Math.sin(th);
+      case 'horizontal': return 0;
+      case 'verticalUp': return v0;
+      case 'verticalDown': return -v0;
+    }
+  }
 
-startBtn.addEventListener('click',()=>{
-  v0=parseFloat(v0El.value)||0;
-  angleDeg=parseFloat(angleEl.value)||0;
-  h0=parseFloat(h0El.value)||0;
-  t=0;
-  path=[{t:0,x:0,y:h0,vx:v0*Math.cos(deg2
+  // Fizik adımı
+  function step(){
+    if(!running) return;
+    t += dt * speedMul;
+
+    const vx0 = initialVX();
+    const vy0 = initialVY();
+
+    const x = vx0 * t;
+    const y = h0 + vy0 * t - 0.5 * g * t * t;
+
+    const vx = vx0;         // sürtünmesiz → sabit
+    const vy = vy0 - g * t; // g ile değişir
+
+    // yere temas: y<=0 → dur
+    if(y <= 0){
+      path.push({t, x, y:0, vx, vy});
+      running = false;
+    } else {
+      path.push({t, x, y, vx, vy});
+    }
+  }
+
+  // Çizim
+  function draw(){
+    const w = scene.width, h = scene.height;
+    ctx.clearRect(0,0,w,h);
+
+    // ölçek: 1 m → 6 px; taban: h-40; x ofset: 60px
+    // zemin
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#0a3';
+    ctx.fillRect(0, h-40, w, 40);
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--groundLine').trim() || '#34d399';
+    ctx.beginPath(); ctx.moveTo(0,h-40); ctx.lineTo(w,h-40); ctx.stroke();
+
+    // yol izi
+    if(path.length){
+      if(showTrail){
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#60a5fa';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(60 + path[0].x*6, (h-40) - path[0].y*6);
+        for(const p of path){
+          ctx.lineTo(60 + p.x*6, (h-40) - p.y*6);
+        }
+        ctx.stroke();
+      }
+
+      // cisim
+      const last = path[path.length-1];
+      const cx = 60 + last.x*6;
+      const cy = (h-40) - last.y*6;
+
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--point').trim() || '#fbbf24';
+      ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2); ctx.fill();
+
+      // hız vektörü
+      if(showV){
+        const scaleV = 4; // görsel ölçek
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + last.vx*scaleV, cy - last.vy*scaleV);
+        ctx.stroke();
+      }
+
+      // hız bileşenleri
+      if(showVComp){
+        const scaleV = 4;
+        ctx.strokeStyle = '#f59e0b'; // vx
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + last.vx*scaleV, cy);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#10b981'; // vy
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx, cy - last.vy*scaleV);
+        ctx.stroke();
+      }
+
+      // ivme vektörü (g aşağı)
+      if(showA){
+        const scaleA = 20; // görsel için
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx, cy + g*scaleA);
+        ctx.stroke();
+      }
+    }
+
+    // Anlık veriler
+    const last = path[path.length-1] || {t:0,x:0,y:0,vx:0,vy:0};
+    tVal.textContent = format(last.t,'s');
+    xVal.textContent = format(last.x,'m');
+    yVal.textContent = format(last.y,'m');
+    vxVal.textContent = format(last.vx,'m/s');
+    vyVal.textContent = format(last.vy,'m/s');
+  }
+
+  // Döngü
+  function loop(){
+    step();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Canvas gerçek piksel boyutu
+  function resizeCanvas(){
+    const rect = scene.getBoundingClientRect();
+    scene.width = Math.max(600, Math.floor(rect.width));
+    scene.height = 360;
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // Başlangıç
+  resizeCanvas();
+  path = [{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
+  loop();
+</script>
+</body>
+</html>
