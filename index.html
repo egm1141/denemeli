@@ -4,17 +4,78 @@
   <meta charset="UTF-8">
   <title>Atış Hareketleri Simülasyonu (g=10)</title>
   <style>
-    body{margin:0; background:#0f172a; color:#e5e7eb; font-family:Arial, sans-serif;}
-    header{padding:16px; text-align:center; font-weight:bold; border-bottom:1px solid #1f2937;}
-    .wrap{display:grid; grid-template-columns:1.1fr 0.9fr; gap:16px; padding:16px;}
-    .card{background:#111827; border:1px solid #1f2937; border-radius:10px; padding:12px;}
-    canvas{display:block; width:100%; height:400px; background:#0b1222; border:1px solid #1f2937; border-radius:10px;}
-    label{display:block; margin:10px 0 6px; color:#9ca3af; font-size:14px;}
-    input,select{width:100%; padding:8px; border-radius:8px; border:1px solid #374151; background:#0b1222; color:#e5e7eb;}
-    .btns{display:flex; gap:8px; margin-top:10px;}
-    button{padding:8px 12px; border-radius:8px; border:1px solid #374151; background:#10223a; color:#e5e7eb; cursor:pointer;}
-    .data{display:flex; flex-wrap:wrap; gap:12px; margin-top:12px;}
-    .kv{background:#0b1222; border:1px solid #1f2937; border-radius:8px; padding:6px 10px; min-width:120px;}
+    body {
+      margin:0;
+      font-family:Arial, sans-serif;
+      background:#0f172a; /* koyu arka plan */
+      color:#e5e7eb;
+    }
+    header {
+      padding:16px;
+      text-align:center;
+      font-weight:bold;
+      border-bottom:1px solid #1f2937;
+    }
+    .wrap {
+      display:grid;
+      grid-template-columns:1.1fr 0.9fr;
+      gap:16px;
+      padding:16px;
+    }
+    .card {
+      background:#111827;
+      border:1px solid #1f2937;
+      border-radius:10px;
+      padding:12px;
+    }
+    canvas {
+      display:block;
+      width:100%;
+      height:400px;
+      background:#0b1222; /* canvas arka plan */
+      border:1px solid #1f2937;
+      border-radius:10px;
+    }
+    label {
+      display:block;
+      margin:10px 0 6px;
+      color:#9ca3af;
+      font-size:14px;
+    }
+    input,select {
+      width:100%;
+      padding:8px;
+      border-radius:8px;
+      border:1px solid #374151;
+      background:#0b1222;
+      color:#e5e7eb;
+    }
+    .btns {
+      display:flex;
+      gap:8px;
+      margin-top:10px;
+    }
+    button {
+      padding:8px 12px;
+      border-radius:8px;
+      border:1px solid #374151;
+      background:#10223a;
+      color:#e5e7eb;
+      cursor:pointer;
+    }
+    .data {
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:12px;
+    }
+    .kv {
+      background:#0b1222;
+      border:1px solid #1f2937;
+      border-radius:8px;
+      padding:6px 10px;
+      min-width:120px;
+    }
   </style>
 </head>
 <body>
@@ -133,10 +194,12 @@ function step(){
 function draw(){
   const w=scene.width, h=scene.height;
   ctx.clearRect(0,0,w,h);
+  // Zemin
   ctx.fillStyle='#0a3';
   ctx.fillRect(0,h-40,w,40);
   ctx.strokeStyle='#34d399';
   ctx.beginPath(); ctx.moveTo(0,h-40); ctx.lineTo(w,h-40); ctx.stroke();
+  // Yol ve top
   if(path.length){
     ctx.strokeStyle='#60a5fa';
     ctx.beginPath();
@@ -166,4 +229,8 @@ startBtn.addEventListener('click',()=>{
   applyTypeAngleLock();
   t=0;
   path=[{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
-  running=true;
+  running=true; paused=false;
+  pauseBtn.textContent='Duraklat';
+});
+
+pauseBtn.addEventListener('click
