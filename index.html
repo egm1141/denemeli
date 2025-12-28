@@ -2,64 +2,62 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Atış Hareketi Simülasyonu (g=10)</title>
+  <title>Atış Hareketleri Simülasyonu (g=10)</title>
   <style>
     body { font-family: Arial, sans-serif; background:#0f172a; color:#e5e7eb; margin:0; }
-    h1 { text-align:center; margin:16px 0; }
+    header { padding:16px; text-align:center; font-size:20px; font-weight:bold; border-bottom:1px solid #1f2937; }
     .wrap { display:flex; gap:16px; padding:16px; }
-    .left { display:flex; flex-direction:column; gap:12px; flex:1; }
-    .right { flex:1; display:flex; flex-direction:column; align-items:center; }
-    .panel { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:12px; margin-bottom:12px; }
+    .card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:12px; flex:1; }
+    canvas { background:#0b1222; border:1px solid #1f2937; border-radius:10px; width:100%; height:300px; }
     label { display:block; margin:8px 0 4px; font-size:14px; color:#9ca3af; }
     input { width:100%; padding:6px 8px; border-radius:8px; border:1px solid #374151; background:#0b1222; color:#e5e7eb; }
     button { margin:6px 4px; padding:8px 12px; border-radius:8px; border:1px solid #374151; background:#10223a; color:#e5e7eb; cursor:pointer; }
-    canvas { background:#0b1222; border:1px solid #1f2937; border-radius:10px; }
-    .title { text-align:center; font-size:13px; color:#9ca3af; margin-top:4px; }
-    .results { display:flex; justify-content:center; gap:20px; padding:12px; border-top:1px solid #1f2937; background:#111827; }
+    .data { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
     .kv { background:#0b1222; border:1px solid #1f2937; border-radius:8px; padding:6px 10px; }
+    .graphs { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px; }
+    .title { text-align:center; font-size:13px; color:#9ca3af; margin-top:4px; }
   </style>
 </head>
 <body>
-  <h1>Atış Hareketi (g = 10 m/s²)</h1>
+  <header>Atış Hareketleri Simülasyonu (g = 10 m/s²)</header>
 
   <div class="wrap">
-    <!-- Sol tarafta grafikler -->
-    <div class="left">
-      <div class="panel">
-        <label>İlk hız v₀ (m/s)</label>
-        <input type="number" id="v0" value="20">
-        <label>Açı θ (derece)</label>
-        <input type="number" id="angle" value="45">
-        <label>Başlangıç yüksekliği h₀ (m)</label>
-        <input type="number" id="h0" value="0">
-        <div style="margin-top:8px">
-          <button id="startBtn">Başlat</button>
-          <button id="pauseBtn">Duraklat</button>
-          <button id="resetBtn">Sıfırla</button>
-        </div>
-      </div>
-      <canvas id="graphY" width="400" height="200"></canvas>
-      <div class="title">y–t grafiği</div>
-      <canvas id="graphX" width="400" height="200"></canvas>
-      <div class="title">x–t grafiği</div>
-      <canvas id="graphVx" width="400" height="200"></canvas>
-      <div class="title">vx–t grafiği</div>
-      <canvas id="graphVy" width="400" height="200"></canvas>
-      <div class="title">vy–t grafiği</div>
+    <!-- Sol: Görünüm -->
+    <div class="card">
+      <h2>Görünüm</h2>
+      <canvas id="motion"></canvas>
     </div>
 
-    <!-- Sağ tarafta hareket görünümü -->
-    <div class="right">
-      <canvas id="motion" width="480" height="480"></canvas>
-      <div class="title">Hareketin görünümü</div>
+    <!-- Sağ: Kontrol paneli -->
+    <div class="card">
+      <h2>Kontrol Paneli</h2>
+      <label>İlk hız v₀ (m/s)</label>
+      <input type="number" id="v0" value="20">
+      <label>Açı θ (derece)</label>
+      <input type="number" id="angle" value="45">
+      <label>Başlangıç yüksekliği h₀ (m)</label>
+      <input type="number" id="h0" value="0">
+      <div style="margin-top:8px">
+        <button id="startBtn">Başlat</button>
+        <button id="pauseBtn">Duraklat</button>
+        <button id="resetBtn">Sıfırla</button>
+      </div>
+      <div class="data">
+        <div class="kv">t: <span id="tVal">0.00 s</span></div>
+        <div class="kv">x: <span id="xVal">0.00 m</span></div>
+        <div class="kv">y: <span id="yVal">0.00 m</span></div>
+        <div class="kv">vx: <span id="vxVal">0.00 m/s</span></div>
+        <div class="kv">vy: <span id="vyVal">0.00 m/s</span></div>
+      </div>
     </div>
   </div>
 
-  <!-- En altta sonuçlar -->
-  <div class="results">
-    <div class="kv">Uçuş süresi T: <span id="T">—</span></div>
-    <div class="kv">Menzil R: <span id="R">—</span></div>
-    <div class="kv">Maksimum yükseklik Hmax: <span id="H">—</span></div>
+  <!-- ALT KISIM: Grafikler -->
+  <div class="graphs">
+    <div class="card"><canvas id="graphY"></canvas><div class="title">y–t grafiği</div></div>
+    <div class="card"><canvas id="graphX"></canvas><div class="title">x–t grafiği</div></div>
+    <div class="card"><canvas id="graphVx"></canvas><div class="title">vx–t grafiği</div></div>
+    <div class="card"><canvas id="graphVy"></canvas><div class="title">vy–t grafiği</div></div>
   </div>
 
 <script>
@@ -75,25 +73,14 @@ const h0El=document.getElementById('h0');
 const startBtn=document.getElementById('startBtn');
 const pauseBtn=document.getElementById('pauseBtn');
 const resetBtn=document.getElementById('resetBtn');
-const TEl=document.getElementById('T');
-const REl=document.getElementById('R');
-const HEl=document.getElementById('H');
+const tVal=document.getElementById('tVal');
+const xVal=document.getElementById('xVal');
+const yVal=document.getElementById('yVal');
+const vxVal=document.getElementById('vxVal');
+const vyVal=document.getElementById('vyVal');
 
 function deg2rad(d){return d*Math.PI/180;}
 function format(n,u){return n.toFixed(2)+' '+u;}
-
-function updateComputed(){
-  const theta=deg2rad(angleDeg);
-  const v0y=v0*Math.sin(theta);
-  const v0x=v0*Math.cos(theta);
-  const disc=v0y*v0y+2*g*h0;
-  const T=(v0y+Math.sqrt(disc))/g;
-  const R=v0x*T;
-  const H=h0+(v0y*v0y)/(2*g);
-  TEl.textContent=format(T,'s');
-  REl.textContent=format(R,'m');
-  HEl.textContent=format(H,'m');
-}
 
 function init(){
   v0=parseFloat(v0El.value)||0;
@@ -103,7 +90,7 @@ function init(){
   path=[{t:0,x:0,y:h0,vx:v0*Math.cos(deg2rad(angleDeg)),vy:v0*Math.sin(deg2rad(angleDeg))}];
   running=false; paused=false;
   pauseBtn.textContent='Duraklat';
-  updateComputed();
+  drawAll();
 }
 
 function step(){
@@ -122,7 +109,11 @@ function step(){
   } else {
     path.push({t,x,y,vx,vy});
   }
-  updateComputed();
+  tVal.textContent=format(t,'s');
+  xVal.textContent=format(x,'m');
+  yVal.textContent=format(Math.max(0,y),'m');
+  vxVal.textContent=format(vx,'m/s');
+  vyVal.textContent=format(vy,'m/s');
   drawAll();
 }
 
@@ -159,4 +150,4 @@ function drawScene(){
     ctx.stroke();
     const last=path[path.length-1];
     ctx.fillStyle='#fbbf24';
-    ctx.beginPath(); ctx.arc(60+last.x*6,(h
+    ctx
