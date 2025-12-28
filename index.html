@@ -1,157 +1,80 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8">
-  <title>Atış Hareketleri Simülasyonu (g=10)</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#0f172a; color:#e5e7eb; margin:0; }
-    header { padding:16px; text-align:center; font-size:20px; font-weight:bold; border-bottom:1px solid #1f2937; }
-    .wrap { display:flex; gap:16px; padding:16px; }
-    .card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:12px; flex:1; }
-    canvas { background:#0b1222; border:1px solid #1f2937; border-radius:10px; width:100%; height:300px; }
-    label { display:block; margin:8px 0 4px; font-size:14px; color:#9ca3af; }
-    input { width:100%; padding:6px 8px; border-radius:8px; border:1px solid #374151; background:#0b1222; color:#e5e7eb; }
-    button { margin:6px 4px; padding:8px 12px; border-radius:8px; border:1px solid #374151; background:#10223a; color:#e5e7eb; cursor:pointer; }
-    .data { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
-    .kv { background:#0b1222; border:1px solid #1f2937; border-radius:8px; padding:6px 10px; }
-  </style>
-</head>
-<body>
-  <header>Atış Hareketleri Simülasyonu (g = 10 m/s²)</header>
+<!-- Control panel -->
+<div class="card">
+  <h2>Kontrol paneli</h2>
+  <div class="controls">
+    <div class="grid">
+      <div class="group">
+        <div class="row">
+          <label>Atış tipi</label>
+          <select id="type">
+            <option value="inclined">Eğik atış</option>
+            <option value="horizontal">Yatay atış</option>
+            <option value="verticalUp">Yukarı düşey</option>
+            <option value="verticalDown">Aşağı düşey</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Yerçekimi (g)</label>
+          <select id="gravityPreset">
+            <option value="9.81">🌍 Dünya (9.81)</option>
+            <option value="1.62">🌙 Ay (1.62)</option>
+            <option value="3.71">🔴 Mars (3.71)</option>
+            <option value="custom">Özel</option>
+          </select>
+          <input type="number" id="gravity" value="9.81" step="0.01" style="max-width:110px" />
+        </div>
+        <div class="row">
+          <label>Hız çarpanı</label>
+          <select id="speedFactor">
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1x</option>
+            <option value="2">2x</option>
+            <option value="4">4x</option>
+          </select>
+        </div>
+      </div>
 
-  <div class="wrap">
-    <!-- Sol: Görünüm -->
-    <div class="card">
-      <h2>Görünüm</h2>
-      <canvas id="motion"></canvas>
+      <div class="group">
+        <div class="row">
+          <label>İlk hız (V₀)</label>
+          <input type="range" id="v0" min="0" max="80" value="25" step="1" />
+          <span id="v0Val">25 m/s</span>
+        </div>
+        <div class="row">
+          <label>Açı (θ)</label>
+          <input type="range" id="angle" min="0" max="90" value="53" step="1" />
+          <span id="angleVal">53°</span>
+        </div>
+        <div class="row">
+          <label>Yükseklik (h)</label>
+          <input type="range" id="height" min="0" max="40" value="0" step="1" />
+          <span id="heightVal">0 m</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Sağ: Kontrol paneli -->
-    <div class="card">
-      <h2>Kontrol Paneli</h2>
-      <label>İlk hız v₀ (m/s)</label>
-      <input type="number" id="v0" value="20">
-      <label>Açı θ (derece)</label>
-      <input type="number" id="angle" value="45">
-      <label>Başlangıç yüksekliği h₀ (m)</label>
-      <input type="number" id="h0" value="0">
-      <div style="margin-top:8px">
-        <button id="startBtn">Başlat</button>
-        <button id="pauseBtn">Duraklat</button>
-        <button id="resetBtn">Sıfırla</button>
+    <div class="group">
+      <div class="toggles">
+        <div class="toggle" data-toggle="showVelVec"><div class="led" id="ledVel"></div>Hız vektörü (v)</div>
+        <div class="toggle" data-toggle="showVelComp"><div class="led" id="ledComp"></div>Hız bileşenleri (vx, vy)</div>
+        <div class="toggle" data-toggle="showAccVec"><div class="led" id="ledAcc"></div>İvme vektörü (g)</div>
+        <div class="toggle" data-toggle="tracePath"><div class="led" id="ledTrace"></div>Yol izini göster</div>
       </div>
-      <div class="data">
-        <div class="kv">t: <span id="tVal">0.00 s</span></div>
-        <div class="kv">x: <span id="xVal">0.00 m</span></div>
-        <div class="kv">y: <span id="yVal">0.00 m</span></div>
-        <div class="kv">vx: <span id="vxVal">0.00 m/s</span></div>
-        <div class="kv">vy: <span id="vyVal">0.00 m/s</span></div>
-      </div>
+    </div>
+
+    <div class="group" style="display:flex; gap:8px; flex-wrap:wrap">
+      <button class="primary" id="startBtn">Başlat</button>
+      <button class="action" id="pauseBtn">Duraklat</button>
+      <button class="danger" id="resetBtn">Sıfırla</button>
+      <button class="action" id="stepBtn">+ Δt</button>
+    </div>
+
+    <div class="data">
+      <div class="kv"><b>t</b><span id="tVal">0.00 s</span></div>
+      <div class="kv"><b>x</b><span id="xVal">0.00 m</span></div>
+      <div class="kv"><b>y</b><span id="yVal">0.00 m</span></div>
+      <div class="kv"><b>Vx</b><span id="vxVal">0.00 m/s</span></div>
+      <div class="kv"><b>Vy</b><span id="vyVal">0.00 m/s</span></div>
     </div>
   </div>
-
-<script>
-const g=10; // sabit yerçekimi
-
-let v0=20, angleDeg=45, h0=0;
-let t=0, dt=0.02;
-let running=false, paused=false;
-let path=[];
-
-const v0El=document.getElementById('v0');
-const angleEl=document.getElementById('angle');
-const h0El=document.getElementById('h0');
-const startBtn=document.getElementById('startBtn');
-const pauseBtn=document.getElementById('pauseBtn');
-const resetBtn=document.getElementById('resetBtn');
-const tVal=document.getElementById('tVal');
-const xVal=document.getElementById('xVal');
-const yVal=document.getElementById('yVal');
-const vxVal=document.getElementById('vxVal');
-const vyVal=document.getElementById('vyVal');
-
-function deg2rad(d){return d*Math.PI/180;}
-function format(n,u){return n.toFixed(2)+' '+u;}
-
-function init(){
-  v0=parseFloat(v0El.value)||0;
-  angleDeg=parseFloat(angleEl.value)||0;
-  h0=parseFloat(h0El.value)||0;
-  t=0;
-  path=[{t:0,x:0,y:h0,vx:v0*Math.cos(deg2rad(angleDeg)),vy:v0*Math.sin(deg2rad(angleDeg))}];
-  running=false; paused=false;
-  pauseBtn.textContent='Duraklat';
-  drawScene();
-}
-
-function step(){
-  if(!running||paused) return;
-  const theta=deg2rad(angleDeg);
-  const v0x=v0*Math.cos(theta);
-  const v0y=v0*Math.sin(theta);
-  t+=dt;
-  const x=v0x*t;
-  const y=h0+v0y*t-0.5*g*t*t;
-  const vx=v0x;
-  const vy=v0y-g*t;
-  if(y<=0){
-    path.push({t,x,y:0,vx,vy});
-    running=false;
-  } else {
-    path.push({t,x,y,vx,vy});
-  }
-  tVal.textContent=format(t,'s');
-  xVal.textContent=format(x,'m');
-  yVal.textContent=format(Math.max(0,y),'m');
-  vxVal.textContent=format(vx,'m/s');
-  vyVal.textContent=format(vy,'m/s');
-  drawScene();
-}
-
-function drawScene(){
-  const ctx=document.getElementById('motion').getContext('2d');
-  const w=ctx.canvas.width,h=ctx.canvas.height;
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle='#0a3'; ctx.fillRect(0,h-40,w,40);
-  ctx.strokeStyle='#34d399'; ctx.beginPath(); ctx.moveTo(0,h-40); ctx.lineTo(w,h-40); ctx.stroke();
-  if(path.length){
-    ctx.strokeStyle='#60a5fa'; ctx.beginPath();
-    ctx.moveTo(60+path[0].x*6,(h-40)-path[0].y*6);
-    for(const p of path){
-      ctx.lineTo(60+p.x*6,(h-40)-p.y*6);
-    }
-    ctx.stroke();
-    const last=path[path.length-1];
-    ctx.fillStyle='#fbbf24';
-    ctx.beginPath(); ctx.arc(60+last.x*6,(h-40)-last.y*6,6,0,Math.PI*2);
-    ctx.fill();
-  }
-}
-
-startBtn.addEventListener('click',()=>{
-  v0=parseFloat(v0El.value)||0;
-  angleDeg=parseFloat(angleEl.value)||0;
-  h0=parseFloat(h0El.value)||0;
-  t=0;
-  path=[{t:0,x:0,y:h0,vx:v0*Math.cos(deg2rad(angleDeg)),vy:v0*Math.sin(deg2rad(angleDeg))}];
-  running=true; paused=false;
-  pauseBtn.textContent='Duraklat';
-});
-
-pauseBtn.addEventListener('click',()=>{
-  if(!running) return;
-  paused=!paused;
-  pauseBtn.textContent=paused?'Devam':'Duraklat';
-});
-
-resetBtn.addEventListener('click',init);
-
-function loop(){
-  step();
-  requestAnimationFrame(loop);
-}
-init();
-loop();
-</script>
-</body>
-</html>
+</div>
