@@ -38,14 +38,14 @@
         <option value="verticalDown">Aşağı Düşey</option>
       </select>
 
-      <label>İlk hız (V₀)</label>
-      <input type="number" id="v0" value="20">
+      <label>İlk hız v₀ (m/s)</label>
+      <input type="number" id="v0" value="20" step="any">
 
-      <label>Açı (θ)</label>
-      <input type="number" id="angle" value="45">
+      <label>Açı θ (derece)</label>
+      <input type="number" id="angle" value="45" step="any">
 
-      <label>Başlangıç yüksekliği h₀</label>
-      <input type="number" id="h0" value="0">
+      <label>Başlangıç yüksekliği h₀ (m)</label>
+      <input type="number" id="h0" value="0" step="any">
 
       <div class="btns">
         <button id="startBtn">Başlat</button>
@@ -179,10 +179,4 @@ startBtn.addEventListener('click',(e)=>{
   if(type==='verticalUp'){angleDeg=90; angleEl.value=90;}
   if(type==='verticalDown'){angleDeg=-90; angleEl.value=-90;}
   t=0;
-  path=[{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
-  running=true; paused=false;
-  pauseBtn.textContent='Duraklat';
-});
-pauseBtn.addEventListener('click',(e)=>{
-  e.preventDefault();
-  if(!running
+  path
