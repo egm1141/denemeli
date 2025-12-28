@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Atış Hareketi Simülasyonu (g = 10 m/s²)</title>
+  <title>Atış Hareketi Simülasyonu (g=10)</title>
   <style>
     body { font-family: Arial, sans-serif; background:#0f172a; color:#e5e7eb; margin:0; }
     h1 { text-align:center; margin:16px 0; }
@@ -13,9 +13,9 @@
     button { margin:6px 4px; padding:8px 12px; border-radius:8px; border:1px solid #374151; background:#10223a; color:#e5e7eb; cursor:pointer; }
     canvas { background:#0b1222; border:1px solid #1f2937; border-radius:10px; }
     .card { display:flex; flex-direction:column; gap:6px; }
+    .title { text-align:center; font-size:13px; color:#9ca3af; margin-top:6px; }
     .info { display:flex; gap:12px; flex-wrap:wrap; font-size:14px; color:#9ca3af; }
     .kv { background:#0b1222; border:1px solid #1f2937; border-radius:8px; padding:6px 8px; }
-    .title { text-align:center; font-size:13px; color:#9ca3af; margin-top:6px; }
   </style>
 </head>
 <body>
@@ -61,235 +61,93 @@
       <canvas id="graphX" width="480" height="320"></canvas>
       <div class="title">x–t grafiği (konum–zaman)</div>
     </div>
+
+    <!-- vx–t grafiği -->
+    <div class="card">
+      <canvas id="graphVx" width="480" height="320"></canvas>
+      <div class="title">vx–t grafiği (hız–zaman)</div>
+    </div>
+
+    <!-- vy–t grafiği -->
+    <div class="card">
+      <canvas id="graphVy" width="480" height="320"></canvas>
+      <div class="title">vy–t grafiği (hız–zaman)</div>
+    </div>
   </div>
 
 <script>
-  // Sabit yerçekimi
-  const g = 10;
+  const g = 10; // sabit yerçekimi
 
-  // Durum
-  let v0 = 20, angleDeg = 45, h0 = 0;
-  let t = 0, dt = 0.02;
-  let running = false, paused = false;
-  let path = []; // {t, x, y}
+  let v0=20, angleDeg=45, h0=0;
+  let t=0, dt=0.02;
+  let running=false, paused=false;
+  let path=[];
 
-  // Elemanlar
-  const v0El = document.getElementById('v0');
-  const angleEl = document.getElementById('angle');
-  const h0El = document.getElementById('h0');
-  const startBtn = document.getElementById('startBtn');
-  const pauseBtn = document.getElementById('pauseBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const TEl = document.getElementById('T');
-  const REl = document.getElementById('R');
-  const HEl = document.getElementById('H');
+  const v0El=document.getElementById('v0');
+  const angleEl=document.getElementById('angle');
+  const h0El=document.getElementById('h0');
+  const startBtn=document.getElementById('startBtn');
+  const pauseBtn=document.getElementById('pauseBtn');
+  const resetBtn=document.getElementById('resetBtn');
+  const TEl=document.getElementById('T');
+  const REl=document.getElementById('R');
+  const HEl=document.getElementById('H');
 
-  const motion = document.getElementById('motion');
-  const graphY = document.getElementById('graphY');
-  const graphX = document.getElementById('graphX');
-  const ctxM = motion.getContext('2d');
-  const ctxY = graphY.getContext('2d');
-  const ctxX = graphX.getContext('2d');
+  const ctxM=document.getElementById('motion').getContext('2d');
+  const ctxY=document.getElementById('graphY').getContext('2d');
+  const ctxX=document.getElementById('graphX').getContext('2d');
+  const ctxVx=document.getElementById('graphVx').getContext('2d');
+  const ctxVy=document.getElementById('graphVy').getContext('2d');
 
-  // Yardımcılar
-  function deg2rad(d){ return d * Math.PI / 180; }
-  function format(n, unit){
-    if(!isFinite(n)) return '—';
-    return n.toFixed(2) + ' ' + unit;
-  }
+  function deg2rad(d){return d*Math.PI/180;}
+  function format(n,u){return n.toFixed(2)+' '+u;}
 
-  // Eksen çizimi
-  function drawAxes(ctx, w, h, xLabel, yLabel){
-    ctx.clearRect(0,0,w,h);
-    ctx.strokeStyle = '#374151';
-    ctx.lineWidth = 1.5;
-    // x ekseni
-    ctx.beginPath();
-    ctx.moveTo(40, h-40);
-    ctx.lineTo(w-20, h-40);
-    ctx.stroke();
-    // y ekseni
-    ctx.beginPath();
-    ctx.moveTo(40, h-40);
-    ctx.lineTo(40, 20);
-    ctx.stroke();
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '12px Arial';
-    ctx.fillText(xLabel, w-70, h-22);
-    ctx.fillText(yLabel, 18, 28);
-    // ızgara
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    for(let i=0;i<8;i++){
-      const yy = h-40 - i*30;
-      ctx.beginPath(); ctx.moveTo(40, yy); ctx.lineTo(w-20, yy); ctx.stroke();
-    }
-    for(let i=0;i<10;i++){
-      const xx = 40 + i*40;
-      ctx.beginPath(); ctx.moveTo(xx, 20); ctx.lineTo(xx, h-40); ctx.stroke();
-    }
-  }
-
-  // Hesaplanan değerleri göster
   function updateComputed(){
-    const theta = deg2rad(angleDeg);
-    const v0y = v0 * Math.sin(theta);
-    const v0x = v0 * Math.cos(theta);
-
-    // T = (v0*sinθ + sqrt((v0*sinθ)^2 + 2 g h0)) / g
-    const disc = v0y*v0y + 2*g*h0;
-    const T = (v0y + Math.sqrt(Math.max(0, disc))) / g;
-    const R = v0x * T;
-    const Hmax = h0 + (v0y*v0y) / (2*g);
-
-    TEl.textContent = format(T,'s');
-    REl.textContent = format(R,'m');
-    HEl.textContent = format(Hmax,'m');
+    const theta=deg2rad(angleDeg);
+    const v0y=v0*Math.sin(theta);
+    const v0x=v0*Math.cos(theta);
+    const disc=v0y*v0y+2*g*h0;
+    const T=(v0y+Math.sqrt(disc))/g;
+    const R=v0x*T;
+    const H=h0+(v0y*v0y)/(2*g);
+    TEl.textContent=format(T,'s');
+    REl.textContent=format(R,'m');
+    HEl.textContent=format(H,'m');
   }
 
-  // Başlangıç
   function init(){
-    v0 = parseFloat(v0El.value) || 0;
-    angleDeg = parseFloat(angleEl.value) || 0;
-    h0 = parseFloat(h0El.value) || 0;
-    t = 0;
-    path = [{t:0, x:0, y:h0}];
-    running = false; paused = false;
-    pauseBtn.textContent = 'Duraklat';
+    v0=parseFloat(v0El.value)||0;
+    angleDeg=parseFloat(angleEl.value)||0;
+    h0=parseFloat(h0El.value)||0;
+    t=0; path=[{t:0,x:0,y:h0,vx:v0*Math.cos(deg2rad(angleDeg)),vy:v0*Math.sin(deg2rad(angleDeg))}];
+    running=false; paused=false;
+    pauseBtn.textContent='Duraklat';
     updateComputed();
-    drawScene();
-    drawGraphs(); // ilk eksenler + başlangıç noktası
+    drawAll();
   }
 
-  // Sahne çizimi
+  function drawAxes(ctx,w,h,xLabel,yLabel){
+    ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle='#374151'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(40,h-40); ctx.lineTo(w-20,h-40); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(40,h-40); ctx.lineTo(40,20); ctx.stroke();
+    ctx.fillStyle='#9ca3af'; ctx.font='12px Arial';
+    ctx.fillText(xLabel,w-70,h-22); ctx.fillText(yLabel,18,28);
+  }
+
+  function drawAll(){
+    drawScene();
+    drawGraph(ctxY,'y',6,'t (s)','y (m)');
+    drawGraph(ctxX,'x',4,'t (s)','x (m)');
+    drawGraph(ctxVx,'vx',10,'t (s)','vx (m/s)');
+    drawGraph(ctxVy,'vy',10,'t (s)','vy (m/s)');
+  }
+
   function drawScene(){
-    const w = motion.width, h = motion.height;
+    const w=480,h=320;
     ctxM.clearRect(0,0,w,h);
-
-    // Zemin çizgisi
-    ctxM.fillStyle = '#0a3';
-    ctxM.fillRect(0, h-40, w, 40);
-    ctxM.strokeStyle = '#34d399';
-    ctxM.lineWidth = 2;
-    ctxM.beginPath();
-    ctxM.moveTo(0, h-40);
-    ctxM.lineTo(w, h-40);
-    ctxM.stroke();
-
-    // Yol izi
-    ctxM.strokeStyle = '#60a5fa';
-    ctxM.lineWidth = 2;
-    ctxM.beginPath();
-    // ölçek: 1 m -> 6 px; başlangıç ofset: x:60px
+    ctxM.fillStyle='#0a3'; ctxM.fillRect(0,h-40,w,40);
+    ctxM.strokeStyle='#34d399'; ctxM.beginPath(); ctxM.moveTo(0,h-40); ctxM.lineTo(w,h-40); ctxM.stroke();
+    ctxM.strokeStyle='#60a5fa'; ctxM.beginPath();
     if(path.length){
-      const p0 = path[0];
-      ctxM.moveTo(60 + p0.x*6, (h-40) - p0.y*6);
-      for(const p of path){
-        ctxM.lineTo(60 + p.x*6, (h-40) - p.y*6);
-      }
-      ctxM.stroke();
-    }
-
-    // Cisim
-    const last = path[path.length-1];
-    const cx = 60 + last.x*6;
-    const cy = (h-40) - last.y*6;
-    ctxM.fillStyle = '#fbbf24';
-    ctxM.beginPath();
-    ctxM.arc(cx, cy, 6, 0, Math.PI*2);
-    ctxM.fill();
-  }
-
-  // Grafikler çizimi
-  function drawGraphs(){
-    const wY=graphY.width, hY=graphY.height;
-    const wX=graphX.width, hX=graphX.height;
-
-    drawAxes(ctxY, wY, hY, 't (s)', 'y (m)');
-    drawAxes(ctxX, wX, hX, 't (s)', 'x (m)');
-
-    // y–t çiz
-    if(path.length){
-      ctxY.strokeStyle = '#22d3ee';
-      ctxY.lineWidth = 2;
-      ctxY.beginPath();
-      const p0 = path[0];
-      ctxY.moveTo(40 + p0.t*60, (hY-40) - p0.y*6);
-      for(const p of path){
-        ctxY.lineTo(40 + p.t*60, (hY-40) - p.y*6);
-      }
-      ctxY.stroke();
-    }
-
-    // x–t çiz
-    if(path.length){
-      ctxX.strokeStyle = '#f59e0b';
-      ctxX.lineWidth = 2;
-      ctxX.beginPath();
-      const p0 = path[0];
-      ctxX.moveTo(40 + p0.t*60, (hX-40) - p0.x*4);
-      for(const p of path){
-        ctxX.lineTo(40 + p.t*60, (hX-40) - p.x*4);
-      }
-      ctxX.stroke();
-    }
-  }
-
-  // Fizik adımı
-  function step(){
-    if(!running || paused) return;
-
-    const theta = deg2rad(angleDeg);
-    const v0x = v0 * Math.cos(theta);
-    const v0y = v0 * Math.sin(theta);
-
-    t += dt;
-    const x = v0x * t;
-    const y = h0 + v0y * t - 0.5 * g * t * t;
-
-    // Yer temasında durdur
-    if(y <= 0){
-      const yPrev = path[path.length-1].y;
-      // zemini aşmayalım
-      const yClamped = Math.max(0, y);
-      path.push({t, x, y: yClamped});
-      running = false; // uçuş bitti
-    } else {
-      path.push({t, x, y});
-    }
-
-    updateComputed();
-    drawScene();
-    drawGraphs();
-  }
-
-  // Olaylar
-  startBtn.addEventListener('click', ()=>{
-    v0 = parseFloat(v0El.value) || 0;
-    angleDeg = parseFloat(angleEl.value) || 0;
-    h0 = parseFloat(h0El.value) || 0;
-    t = 0;
-    path = [{t:0, x:0, y:h0}];
-    running = true; paused = false;
-    pauseBtn.textContent = 'Duraklat';
-  });
-
-  pauseBtn.addEventListener('click', ()=>{
-    if(!running) return;
-    paused = !paused;
-    pauseBtn.textContent = paused ? 'Devam' : 'Duraklat';
-  });
-
-  resetBtn.addEventListener('click', init);
-
-  // Ana döngü
-  function loop(){
-    step();
-    requestAnimationFrame(loop);
-  }
-
-  // Başlat
-  init();
-  loop();
-</script>
-</body>
-</html>
+      ctxM.moveTo(60+path[0].x
