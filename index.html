@@ -9,7 +9,7 @@
     header{padding:16px; text-align:center; font-weight:bold; border-bottom:1px solid #1f2937;}
     .wrap{display:grid; grid-template-columns:1.1fr 0.9fr; gap:16px; padding:16px;}
     .card{background:#111827; border:1px solid #1f2937; border-radius:10px; padding:12px;}
-    canvas{display:block; width:100%; height:360px; background:#0b1222; border:1px solid #1f2937; border-radius:10px;}
+    canvas{display:block; background:#0b1222; border:1px solid #1f2937; border-radius:10px;}
     label{display:block; margin:10px 0 6px; color:#9ca3af; font-size:14px;}
     input,select{width:100%; padding:8px; border-radius:8px; border:1px solid #374151; background:#0b1222; color:#e5e7eb;}
     .btns{display:flex; gap:8px; margin-top:10px;}
@@ -23,16 +23,15 @@
   <header>Atış Hareketleri Simülasyonu (g = 10 m/s²)</header>
 
   <div class="wrap">
-    <!-- Sol: Görünüm -->
     <div class="card">
       <h2>Görünüm</h2>
-      <!-- Not: width/height HTML attribute veriyoruz; JS içinde güncellenecek -->
-      <canvas id="scene" width="800" height="360"></canvas>
+      <!-- Önemli: width/height attribute’ları set -->
+      <canvas id="scene" width="900" height="400"></canvas>
     </div>
 
-    <!-- Sağ: Kontrol Paneli -->
     <div class="card">
       <h2>Kontrol Paneli</h2>
+
       <label>Atış tipi</label>
       <select id="type">
         <option value="inclined">Eğik Atış</option>
@@ -97,11 +96,17 @@
   const vxVal = document.getElementById('vxVal');
   const vyVal = document.getElementById('vyVal');
 
-  // Yardımcılar
-  function deg2rad(d){ return d * Math.PI / 180; }
-  function format(n,u){ return (isFinite(n)? n.toFixed(2) : '—') + ' ' + u; }
+  // Canvas DPI düzeltme
+  function fixDPI(){
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = scene.clientWidth;
+    const cssH = scene.clientHeight;
+    scene.width = Math.floor(cssW * dpr);
+    scene.height = Math.floor(cssH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
 
-  // Tip değişiminde açı otomatik ayarla ve inputu kilitle/serbest bırak
+  // Tip değişiminde açı kilitle
   function applyTypeAngleLock(){
     const type = typeEl.value;
     angleEl.disabled = false;
@@ -112,9 +117,28 @@
 
   typeEl.addEventListener('change', ()=>{
     applyTypeAngleLock();
-    // Görünümü güncelle
     draw();
   });
+
+  // İlk hız bileşenleri
+  function deg2rad(d){ return d * Math.PI / 180; }
+  function initialVX(){
+    const th = deg2rad(angleDeg);
+    const type = typeEl.value;
+    if(type === 'inclined') return v0 * Math.cos(th);
+    if(type === 'horizontal') return v0;
+    return 0;
+  }
+  function initialVY(){
+    const th = deg2rad(angleDeg);
+    const type = typeEl.value;
+    if(type === 'inclined') return v0 * Math.sin(th);
+    if(type === 'horizontal') return 0;
+    if(type === 'verticalUp') return v0;
+    if(type === 'verticalDown') return -v0;
+  }
+
+  function format(n,u){ return (isFinite(n)? n.toFixed(2) : '—') + ' ' + u; }
 
   // Başlat
   startBtn.addEventListener('click', ()=>{
@@ -127,6 +151,7 @@
     path = [{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
     running = true; paused = false;
     pauseBtn.textContent = 'Duraklat';
+    draw();
   });
 
   // Duraklat/Devam
@@ -152,23 +177,6 @@
     draw();
   });
 
-  // İlk hız bileşenleri
-  function initialVX(){
-    const th = deg2rad(angleDeg);
-    const type = typeEl.value;
-    if(type === 'inclined') return v0 * Math.cos(th);
-    if(type === 'horizontal') return v0;
-    return 0; // verticalUp/down
-  }
-  function initialVY(){
-    const th = deg2rad(angleDeg);
-    const type = typeEl.value;
-    if(type === 'inclined') return v0 * Math.sin(th);
-    if(type === 'horizontal') return 0;
-    if(type === 'verticalUp') return v0;
-    if(type === 'verticalDown') return -v0;
-  }
-
   // Fizik adımı
   function step(){
     if(!running || paused) return;
@@ -183,25 +191,17 @@
 
     if(y <= 0){
       path.push({t, x, y:0, vx, vy});
-      running = false; // yere değdi → dur
+      running = false;
     } else {
       path.push({t, x, y, vx, vy});
     }
   }
 
-  // Canvas boyutunu güncelle (görünümün "gitmesini" engeller)
-  function resizeCanvas(){
-    const cssW = scene.clientWidth;
-    const cssH = 360; // CSS ile sabit
-    scene.width = cssW;  // gerçek piksel genişlik
-    scene.height = cssH; // gerçek piksel yükseklik
-  }
-  window.addEventListener('resize', ()=>{ resizeCanvas(); draw(); });
-
   // Çizim
   function draw(){
-    const w = scene.width;
-    const h = scene.height;
+    fixDPI(); // her çizimde gerçek piksel boyutunu garanti et
+    const w = scene.clientWidth;
+    const h = scene.clientHeight;
     ctx.clearRect(0,0,w,h);
 
     // Zemin
@@ -247,9 +247,8 @@
     requestAnimationFrame(loop);
   }
 
-  // Başlangıç: her şey hazır
-  resizeCanvas();
-  applyTypeAngleLock(); // başlangıç tipi eğik → açı serbest
+  // Başlangıç
+  applyTypeAngleLock();
   path = [{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
   draw();
   loop();
