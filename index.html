@@ -14,8 +14,6 @@
     button { margin:6px 4px; padding:8px 12px; border-radius:8px; border:1px solid #374151; background:#10223a; color:#e5e7eb; cursor:pointer; }
     .data { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
     .kv { background:#0b1222; border:1px solid #1f2937; border-radius:8px; padding:6px 10px; }
-    .graphs { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px; }
-    .title { text-align:center; font-size:13px; color:#9ca3af; margin-top:4px; }
   </style>
 </head>
 <body>
@@ -52,16 +50,9 @@
     </div>
   </div>
 
-  <!-- ALT KISIM: Grafikler -->
-  <div class="graphs">
-    <div class="card"><canvas id="graphY"></canvas><div class="title">y–t grafiği</div></div>
-    <div class="card"><canvas id="graphX"></canvas><div class="title">x–t grafiği</div></div>
-    <div class="card"><canvas id="graphVx"></canvas><div class="title">vx–t grafiği</div></div>
-    <div class="card"><canvas id="graphVy"></canvas><div class="title">vy–t grafiği</div></div>
-  </div>
-
 <script>
-const g=10;
+const g=10; // sabit yerçekimi
+
 let v0=20, angleDeg=45, h0=0;
 let t=0, dt=0.02;
 let running=false, paused=false;
@@ -90,7 +81,7 @@ function init(){
   path=[{t:0,x:0,y:h0,vx:v0*Math.cos(deg2rad(angleDeg)),vy:v0*Math.sin(deg2rad(angleDeg))}];
   running=false; paused=false;
   pauseBtn.textContent='Duraklat';
-  drawAll();
+  drawScene();
 }
 
 function step(){
@@ -114,25 +105,7 @@ function step(){
   yVal.textContent=format(Math.max(0,y),'m');
   vxVal.textContent=format(vx,'m/s');
   vyVal.textContent=format(vy,'m/s');
-  drawAll();
-}
-
-function drawGraph(ctx,key,scale,xLabel,yLabel){
-  const w=ctx.canvas.width,h=ctx.canvas.height;
-  ctx.clearRect(0,0,w,h);
-  ctx.strokeStyle='#374151'; ctx.beginPath();
-  ctx.moveTo(40,h-40); ctx.lineTo(w-20,h-40); ctx.stroke();
-  ctx.moveTo(40,h-40); ctx.lineTo(40,20); ctx.stroke();
-  ctx.fillStyle='#9ca3af'; ctx.font='12px Arial';
-  ctx.fillText(xLabel,w-70,h-22); ctx.fillText(yLabel,18,28);
-  if(path.length){
-    ctx.strokeStyle='#22d3ee'; ctx.beginPath();
-    ctx.moveTo(40+path[0].t*60,(h-40)-path[0][key]*scale);
-    for(const p of path){
-      ctx.lineTo(40+p.t*60,(h-40)-p[key]*scale);
-    }
-    ctx.stroke();
-  }
+  drawScene();
 }
 
 function drawScene(){
@@ -150,4 +123,35 @@ function drawScene(){
     ctx.stroke();
     const last=path[path.length-1];
     ctx.fillStyle='#fbbf24';
-    ctx
+    ctx.beginPath(); ctx.arc(60+last.x*6,(h-40)-last.y*6,6,0,Math.PI*2);
+    ctx.fill();
+  }
+}
+
+startBtn.addEventListener('click',()=>{
+  v0=parseFloat(v0El.value)||0;
+  angleDeg=parseFloat(angleEl.value)||0;
+  h0=parseFloat(h0El.value)||0;
+  t=0;
+  path=[{t:0,x:0,y:h0,vx:v0*Math.cos(deg2rad(angleDeg)),vy:v0*Math.sin(deg2rad(angleDeg))}];
+  running=true; paused=false;
+  pauseBtn.textContent='Duraklat';
+});
+
+pauseBtn.addEventListener('click',()=>{
+  if(!running) return;
+  paused=!paused;
+  pauseBtn.textContent=paused?'Devam':'Duraklat';
+});
+
+resetBtn.addEventListener('click',init);
+
+function loop(){
+  step();
+  requestAnimationFrame(loop);
+}
+init();
+loop();
+</script>
+</body>
+</html>
