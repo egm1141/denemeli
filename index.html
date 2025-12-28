@@ -3,21 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Atış Hareketleri Simülasyonu (g=10)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body{margin:0; background:#0f172a; color:#e5e7eb; font-family:Arial, sans-serif;}
-    header{padding:16px; text-align:center; font-weight:bold; border-bottom:1px solid #1f2937;}
-    .wrap{display:grid; grid-template-columns:1.1fr 0.9fr; gap:16px; padding:16px;}
-    .card{background:#111827; border:1px solid #1f2937; border-radius:10px; padding:12px;}
-    canvas{display:block; background:#0b1222; border:1px solid #1f2937; border-radius:10px;}
-    label{display:block; margin:10px 0 6px; color:#9ca3af; font-size:14px;}
-    input,select{width:100%; padding:8px; border-radius:8px; border:1px solid #374151; background:#0b1222; color:#e5e7eb;}
-    .btns{display:flex; gap:8px; margin-top:10px;}
-    button{padding:8px 12px; border-radius:8px; border:1px solid #374151; background:#10223a; color:#e5e7eb; cursor:pointer;}
-    .data{display:flex; flex-wrap:wrap; gap:12px; margin-top:12px;}
-    .kv{background:#0b1222; border:1px solid #1f2937; border-radius:8px; padding:6px 10px; min-width:120px;}
-    .muted{color:#9ca3af; font-size:12px; margin-top:6px;}
-  </style>
+  <link rel="stylesheet" href="./style.css"> <!-- göreceli yol -->
 </head>
 <body>
   <header>Atış Hareketleri Simülasyonu (g = 10 m/s²)</header>
@@ -25,13 +11,12 @@
   <div class="wrap">
     <div class="card">
       <h2>Görünüm</h2>
-      <!-- Önemli: width/height attribute’ları set -->
+      <!-- width/height attribute ekli -->
       <canvas id="scene" width="900" height="400"></canvas>
     </div>
 
     <div class="card">
       <h2>Kontrol Paneli</h2>
-
       <label>Atış tipi</label>
       <select id="type">
         <option value="inclined">Eğik Atış</option>
@@ -41,15 +26,13 @@
       </select>
 
       <label>İlk hız v₀ (m/s)</label>
-      <input type="number" id="v0" value="25" step="any" />
+      <input type="number" id="v0" value="25" step="any">
 
       <label>Açı θ (derece)</label>
-      <input type="number" id="angle" value="53" step="any" />
+      <input type="number" id="angle" value="53" step="any">
 
       <label>Başlangıç yüksekliği h₀ (m)</label>
-      <input type="number" id="h0" value="0" step="any" />
-
-      <div class="muted">Yerçekimi sabit: g = 10 m/s² (değiştirilemez)</div>
+      <input type="number" id="h0" value="0" step="any">
 
       <div class="btns">
         <button id="startBtn" type="button">Başlat</button>
@@ -67,191 +50,6 @@
     </div>
   </div>
 
-<script>
-  // Sabit yerçekimi
-  const g = 10;
-
-  // Durum
-  let v0 = 25, angleDeg = 53, h0 = 0;
-  let t = 0, dt = 0.02;
-  let running = false, paused = false;
-  let path = []; // {t,x,y,vx,vy}
-
-  // Elemanlar
-  const scene = document.getElementById('scene');
-  const ctx = scene.getContext('2d');
-
-  const typeEl = document.getElementById('type');
-  const v0El = document.getElementById('v0');
-  const angleEl = document.getElementById('angle');
-  const h0El = document.getElementById('h0');
-
-  const startBtn = document.getElementById('startBtn');
-  const pauseBtn = document.getElementById('pauseBtn');
-  const resetBtn = document.getElementById('resetBtn');
-
-  const tVal = document.getElementById('tVal');
-  const xVal = document.getElementById('xVal');
-  const yVal = document.getElementById('yVal');
-  const vxVal = document.getElementById('vxVal');
-  const vyVal = document.getElementById('vyVal');
-
-  // Canvas DPI düzeltme
-  function fixDPI(){
-    const dpr = window.devicePixelRatio || 1;
-    const cssW = scene.clientWidth;
-    const cssH = scene.clientHeight;
-    scene.width = Math.floor(cssW * dpr);
-    scene.height = Math.floor(cssH * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  // Tip değişiminde açı kilitle
-  function applyTypeAngleLock(){
-    const type = typeEl.value;
-    angleEl.disabled = false;
-    if(type === 'horizontal'){ angleDeg = 0; angleEl.value = 0; angleEl.disabled = true; }
-    if(type === 'verticalUp'){ angleDeg = 90; angleEl.value = 90; angleEl.disabled = true; }
-    if(type === 'verticalDown'){ angleDeg = -90; angleEl.value = -90; angleEl.disabled = true; }
-  }
-
-  typeEl.addEventListener('change', ()=>{
-    applyTypeAngleLock();
-    draw();
-  });
-
-  // İlk hız bileşenleri
-  function deg2rad(d){ return d * Math.PI / 180; }
-  function initialVX(){
-    const th = deg2rad(angleDeg);
-    const type = typeEl.value;
-    if(type === 'inclined') return v0 * Math.cos(th);
-    if(type === 'horizontal') return v0;
-    return 0;
-  }
-  function initialVY(){
-    const th = deg2rad(angleDeg);
-    const type = typeEl.value;
-    if(type === 'inclined') return v0 * Math.sin(th);
-    if(type === 'horizontal') return 0;
-    if(type === 'verticalUp') return v0;
-    if(type === 'verticalDown') return -v0;
-  }
-
-  function format(n,u){ return (isFinite(n)? n.toFixed(2) : '—') + ' ' + u; }
-
-  // Başlat
-  startBtn.addEventListener('click', ()=>{
-    v0 = parseFloat(v0El.value)||0;
-    h0 = parseFloat(h0El.value)||0;
-    angleDeg = parseFloat(angleEl.value)||0;
-    applyTypeAngleLock();
-
-    t = 0;
-    path = [{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
-    running = true; paused = false;
-    pauseBtn.textContent = 'Duraklat';
-    draw();
-  });
-
-  // Duraklat/Devam
-  pauseBtn.addEventListener('click', ()=>{
-    if(!running) return;
-    paused = !paused;
-    pauseBtn.textContent = paused ? 'Devam' : 'Duraklat';
-  });
-
-  // Sıfırla
-  resetBtn.addEventListener('click', ()=>{
-    typeEl.value = 'inclined';
-    v0El.value = 25;
-    angleEl.value = 53;
-    h0El.value = 0;
-
-    v0 = 25; angleDeg = 53; h0 = 0;
-    t = 0; running = false; paused = false;
-    pauseBtn.textContent = 'Duraklat';
-
-    path = [{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
-    applyTypeAngleLock();
-    draw();
-  });
-
-  // Fizik adımı
-  function step(){
-    if(!running || paused) return;
-    const vx0 = initialVX();
-    const vy0 = initialVY();
-
-    t += dt;
-    const x = vx0 * t;
-    const y = h0 + vy0 * t - 0.5 * g * t * t;
-    const vx = vx0;
-    const vy = vy0 - g * t;
-
-    if(y <= 0){
-      path.push({t, x, y:0, vx, vy});
-      running = false;
-    } else {
-      path.push({t, x, y, vx, vy});
-    }
-  }
-
-  // Çizim
-  function draw(){
-    fixDPI(); // her çizimde gerçek piksel boyutunu garanti et
-    const w = scene.clientWidth;
-    const h = scene.clientHeight;
-    ctx.clearRect(0,0,w,h);
-
-    // Zemin
-    ctx.fillStyle = '#0a3';
-    ctx.fillRect(0, h-40, w, 40);
-    ctx.strokeStyle = '#34d399';
-    ctx.beginPath(); ctx.moveTo(0, h-40); ctx.lineTo(w, h-40); ctx.stroke();
-
-    // Yol ve top
-    if(path.length){
-      ctx.strokeStyle = '#60a5fa';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(60 + path[0].x*6, (h-40) - path[0].y*6);
-      for(const p of path){
-        ctx.lineTo(60 + p.x*6, (h-40) - p.y*6);
-      }
-      ctx.stroke();
-
-      const last = path[path.length-1];
-      const cx = 60 + last.x*6;
-      const cy = (h-40) - last.y*6;
-
-      ctx.fillStyle = '#fbbf24';
-      ctx.beginPath();
-      ctx.arc(cx, cy, 6, 0, Math.PI*2);
-      ctx.fill();
-    }
-
-    // Anlık veriler
-    const last = path[path.length-1] || {t:0,x:0,y:0,vx:0,vy:0};
-    tVal.textContent = format(last.t, 's');
-    xVal.textContent = format(last.x, 'm');
-    yVal.textContent = format(last.y, 'm');
-    vxVal.textContent = format(last.vx, 'm/s');
-    vyVal.textContent = format(last.vy, 'm/s');
-  }
-
-  // Döngü
-  function loop(){
-    step();
-    draw();
-    requestAnimationFrame(loop);
-  }
-
-  // Başlangıç
-  applyTypeAngleLock();
-  path = [{t:0,x:0,y:h0,vx:initialVX(),vy:initialVY()}];
-  draw();
-  loop();
-</script>
+  <script src="./script.js"></script> <!-- göreceli yol -->
 </body>
 </html>
