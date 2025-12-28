@@ -1,18 +1,530 @@
 <!DOCTYPE html>
-<html lang="en">
-<title>link yeri 1.0</title>
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atış Hareketleri Simülasyonu</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --panel:#111827;
+      --text:#e5e7eb;
+      --accent:#34d399;
+      --accent2:#60a5fa;
+      --danger:#ef4444;
+      --muted:#9ca3af;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:linear-gradient(180deg,#0b1020,#0f172a 35%,#0f172a);
+      color:var(--text); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      display:flex; flex-direction:column; min-height:100vh;
+    }
+    header{
+      padding:16px 20px; display:flex; align-items:center; gap:12px;
+      border-bottom:1px solid #1f2937;
+      position:sticky; top:0; background:#0f172aCC; backdrop-filter:blur(6px);
+    }
+    header h1{font-size:18px; margin:0; font-weight:700}
+    header .badge{font-size:12px; color:var(--muted)}
+    .wrap{
+      display:grid; grid-template-columns: 1.1fr 0.9fr; gap:16px; padding:16px; flex:1;
+    }
+    @media (max-width: 980px){
+      .wrap{grid-template-columns: 1fr; padding:12px}
+    }
+    .card{
+      background:var(--panel); border:1px solid #1f2937; border-radius:14px;
+      overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.35);
+    }
+    .card h2{margin:0; font-size:16px; padding:12px 14px; border-bottom:1px solid #1f2937}
+    .scene{position:relative; aspect-ratio: 16/9; background:#0c1326}
+    canvas{width:100%; height:100%}
+    .overlay{
+      position:absolute; inset:0; pointer-events:none; display:flex; align-items:flex-end;
+    }
+    .ground{
+      width:100%; height:18%; background:linear-gradient(180deg,#0b4,#0a3);
+      border-top:2px solid #063; opacity:.8;
+    }
+    .controls{padding:12px}
+    .grid{
+      display:grid; grid-template-columns: 1fr 1fr; gap:12px;
+    }
+    @media (max-width: 720px){
+      .grid{grid-template-columns: 1fr}
+    }
+    .group{
+      border:1px solid #1f2937; border-radius:12px; padding:10px; background:#0d1324;
+    }
+    .row{display:flex; align-items:center; gap:8px; margin:6px 0}
+    label{font-size:12px; color:var(--muted); min-width:120px}
+    input[type="range"]{width:100%}
+    select,button{
+      background:#0b1222; color:var(--text); border:1px solid #1f2937; border-radius:10px;
+      padding:8px 10px; font-size:14px;
+    }
+    button.action{background:#10223a; border-color:#133253}
+    button.primary{background:linear-gradient(180deg,#1f9,#0b7); color:#022; font-weight:700}
+    button.danger{background:#2a0f12; border-color:#3a1518; color:#fca5a5}
+    .toggles{display:flex; gap:8px; flex-wrap:wrap}
+    .toggle{
+      display:flex; align-items:center; gap:6px; border:1px solid #1f2937; border-radius:999px;
+      padding:6px 10px; background:#0b1222; font-size:12px;
+    }
+    .led{width:10px; height:10px; border-radius:999px; background:#394150}
+    .led.on{background:var(--accent)}
+    .data{
+      display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; margin-top:10px;
+    }
+    .kv{background:#0b1222; border:1px solid #1f2937; border-radius:10px; padding:8px}
+    .kv b{display:block; font-size:11px; color:var(--muted)}
+    .kv span{font-size:14px}
+    footer{
+      padding:10px 16px; font-size:12px; color:var(--muted); border-top:1px solid #1f2937;
+    }
+  </style>
 </head>
 <body>
-    <a href="https://www.youtube.com"
-    target="_blank"
-    title="youtubeye gider"
-    >youtube </a>
+  <header>
+    <h1>Atış Hareketleri Simülasyonu</h1>
+    <span class="badge">Eğik, Yatay, Düşey; vektörler ve canlı veriler</span>
+  </header>
 
-    
+  <div class="wrap">
+    <!-- Canvas card -->
+    <div class="card">
+      <h2>Görünüm</h2>
+      <div class="scene">
+        <canvas id="scene"></canvas>
+        <div class="overlay">
+          <div class="ground"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Control panel -->
+    <div class="card">
+      <h2>Kontrol paneli</h2>
+      <div class="controls">
+        <div class="grid">
+          <div class="group">
+            <div class="row">
+              <label>Atış tipi</label>
+              <select id="type">
+                <option value="inclined">Eğik atış</option>
+                <option value="horizontal">Yatay atış</option>
+                <option value="verticalUp">Yukarı düşey</option>
+                <option value="verticalDown">Aşağı düşey</option>
+              </select>
+            </div>
+            <div class="row">
+              <label>Yerçekimi (g)</label>
+              <select id="gravityPreset">
+                <option value="9.81">🌍 Dünya (9.81)</option>
+                <option value="1.62">🌙 Ay (1.62)</option>
+                <option value="3.71">🔴 Mars (3.71)</option>
+                <option value="custom">Özel</option>
+              </select>
+              <input type="number" id="gravity" value="9.81" step="0.01" style="max-width:110px" />
+            </div>
+            <div class="row">
+              <label>Hız çarpanı</label>
+              <select id="speedFactor">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="2">2x</option>
+                <option value="4">4x</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="group">
+            <div class="row">
+              <label>İlk hız (V₀)</label>
+              <input type="range" id="v0" min="0" max="80" value="25" step="1" />
+              <span id="v0Val">25 m/s</span>
+            </div>
+            <div class="row">
+              <label>Açı (θ)</label>
+              <input type="range" id="angle" min="0" max="90" value="53" step="1" />
+              <span id="angleVal">53°</span>
+            </div>
+            <div class="row">
+              <label>Yükseklik (h)</label>
+              <input type="range" id="height" min="0" max="40" value="0" step="1" />
+              <span id="heightVal">0 m</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="toggles">
+            <div class="toggle" data-toggle="showVelVec"><div class="led" id="ledVel"></div>Hız vektörü (v)</div>
+            <div class="toggle" data-toggle="showVelComp"><div class="led" id="ledComp"></div>Hız bileşenleri (vx, vy)</div>
+            <div class="toggle" data-toggle="showAccVec"><div class="led" id="ledAcc"></div>İvme vektörü (g)</div>
+            <div class="toggle" data-toggle="tracePath"><div class="led" id="ledTrace"></div>Yol izini göster</div>
+          </div>
+        </div>
+
+        <div class="group" style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="primary" id="startBtn">Başlat</button>
+          <button class="action" id="pauseBtn">Duraklat</button>
+          <button class="danger" id="resetBtn">Sıfırla</button>
+          <button class="action" id="stepBtn">+ Δt</button>
+        </div>
+
+        <div class="data">
+          <div class="kv"><b>t</b><span id="tVal">0.00 s</span></div>
+          <div class="kv"><b>x</b><span id="xVal">0.00 m</span></div>
+          <div class="kv"><b>y</b><span id="yVal">0.00 m</span></div>
+          <div class="kv"><b>Vx</b><span id="vxVal">0.00 m/s</span></div>
+          <div class="kv"><b>Vy</b><span id="vyVal">0.00 m/s</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Basit kinematik: hava direnci ihmal edilmiştir. Ölçek, görsel için uyarlanmıştır.
+  </footer>
+
+  <script>
+    // State
+    const state = {
+      type: 'inclined',
+      v0: 25,
+      angleDeg: 53,
+      h0: 0,
+      g: 9.81,
+      speedFactor: 1,
+      showVelVec: false,
+      showVelComp: false,
+      showAccVec: false,
+      tracePath: true,
+      running: false,
+      paused: false,
+      t: 0,
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      path: []
+    };
+
+    // UI refs
+    const scene = document.getElementById('scene');
+    const typeSel = document.getElementById('type');
+    const v0Range = document.getElementById('v0');
+    const angleRange = document.getElementById('angle');
+    const heightRange = document.getElementById('height');
+    const v0Val = document.getElementById('v0Val');
+    const angleVal = document.getElementById('angleVal');
+    const heightVal = document.getElementById('heightVal');
+    const gravityPreset = document.getElementById('gravityPreset');
+    const gravityInput = document.getElementById('gravity');
+    const speedFactorSel = document.getElementById('speedFactor');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const stepBtn = document.getElementById('stepBtn');
+    const tVal = document.getElementById('tVal');
+    const xVal = document.getElementById('xVal');
+    const yVal = document.getElementById('yVal');
+    const vxVal = document.getElementById('vxVal');
+    const vyVal = document.getElementById('vyVal');
+    const ledVel = document.getElementById('ledVel');
+    const ledComp = document.getElementById('ledComp');
+    const ledAcc = document.getElementById('ledAcc');
+    const ledTrace = document.getElementById('ledTrace');
+
+    // Canvas sizing
+    function resizeCanvas(){
+      const rect = scene.getBoundingClientRect();
+      scene.width = Math.floor(rect.width * devicePixelRatio);
+      scene.height = Math.floor(rect.height * devicePixelRatio);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Helpers
+    function deg2rad(d){ return d*Math.PI/180; }
+    function clamp(v,min,max){ return Math.max(min, Math.min(max,v)); }
+    function format(n,unit){ return `${n.toFixed(2)} ${unit}`; }
+
+    // Toggle buttons
+    document.querySelectorAll('.toggle').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const key = el.dataset.toggle;
+        state[key] = !state[key];
+        refreshLeds();
+        render();
+      });
+    });
+    function refreshLeds(){
+      ledVel.classList.toggle('on', state.showVelVec);
+      ledComp.classList.toggle('on', state.showVelComp);
+      ledAcc.classList.toggle('on', state.showAccVec);
+      ledTrace.classList.toggle('on', state.tracePath);
+    }
+
+    // Control bindings
+    typeSel.addEventListener('change', ()=>{
+      state.type = typeSel.value;
+      angleRange.disabled = (state.type==='horizontal' || state.type.startsWith('vertical'));
+      if(state.type==='horizontal'){ state.angleDeg = 0; angleRange.value = 0; angleVal.textContent = '0°'; }
+      if(state.type==='verticalUp'){ state.angleDeg = 90; angleRange.value = 90; angleVal.textContent = '90°'; }
+      if(state.type==='verticalDown'){ state.angleDeg = -90; angleRange.value = 90; angleVal.textContent = '90°'; }
+      resetSim(false);
+    });
+
+    v0Range.addEventListener('input', ()=>{
+      state.v0 = +v0Range.value;
+      v0Val.textContent = `${state.v0} m/s`;
+      resetSim(false);
+    });
+
+    angleRange.addEventListener('input', ()=>{
+      const d = +angleRange.value;
+      if(state.type==='verticalDown'){
+        state.angleDeg = -90;
+        angleVal.textContent = '90°';
+      } else {
+        state.angleDeg = d;
+        angleVal.textContent = `${d}°`;
+      }
+      resetSim(false);
+    });
+
+    heightRange.addEventListener('input', ()=>{
+      state.h0 = +heightRange.value;
+      heightVal.textContent = `${state.h0} m`;
+      resetSim(false);
+    });
+
+    gravityPreset.addEventListener('change', ()=>{
+      const v = gravityPreset.value;
+      if(v==='custom'){
+        gravityInput.disabled = false;
+      } else {
+        state.g = +v;
+        gravityInput.value = state.g.toFixed(2);
+        gravityInput.disabled = true;
+      }
+      resetSim(false);
+    });
+    gravityInput.addEventListener('input', ()=>{
+      state.g = clamp(+gravityInput.value || 9.81, 0.01, 50);
+      resetSim(false);
+    });
+
+    speedFactorSel.addEventListener('change', ()=>{
+      state.speedFactor = +speedFactorSel.value;
+    });
+
+    // Buttons
+    startBtn.addEventListener('click', ()=>{
+      state.running = true; state.paused = false;
+    });
+    pauseBtn.addEventListener('click', ()=>{
+      state.paused = !state.paused;
+      pauseBtn.textContent = state.paused ? 'Devam' : 'Duraklat';
+    });
+    resetBtn.addEventListener('click', ()=> resetSim(true));
+    stepBtn.addEventListener('click', ()=>{
+      stepPhysics(1/30); // small manual step
+      render();
+    });
+
+    // Physics init
+    function initMotion(){
+      const rad = deg2rad(state.angleDeg);
+      let vx = 0, vy = 0;
+      switch(state.type){
+        case 'inclined':
+          vx = state.v0 * Math.cos(rad);
+          vy = state.v0 * Math.sin(rad);
+          break;
+        case 'horizontal':
+          vx = state.v0;
+          vy = 0;
+          break;
+        case 'verticalUp':
+          vx = 0;
+          vy = state.v0;
+          break;
+        case 'verticalDown':
+          vx = 0;
+          vy = -state.v0;
+          break;
+      }
+      state.t = 0;
+      state.x = 0;
+      state.y = state.h0;
+      state.vx = vx;
+      state.vy = vy;
+      state.path = [{x:state.x, y:state.y}];
+    }
+
+    function resetSim(resetControls){
+      initMotion();
+      state.running = false; state.paused = false;
+      pauseBtn.textContent = 'Duraklat';
+      if(resetControls){
+        // leave controls as-is; just re-render
+      }
+      render();
+    }
+
+    // World scaling: map meters to pixels
+    function getScale(){
+      // dynamic scale to fit typical trajectories
+      // target: width ~ 100 m, height ~ 60 m depending on v0/g
+      const ctxW = scene.width, ctxH = scene.height;
+      const targetWm = Math.max(60, Math.min(160, state.v0*state.v0/state.g + 40));
+      const pxPerM = ctxW / targetWm;
+      return {pxPerM, groundYPx: Math.floor(ctxH*0.82)};
+    }
+
+    // Physics step
+    function stepPhysics(dt){
+      if(state.running && !state.paused){
+        dt *= state.speedFactor;
+        state.t += dt;
+        // motion equations (no drag)
+        state.x = state.vx * state.t;
+        state.y = state.h0 + state.vy * state.t - 0.5 * state.g * state.t * state.t;
+        // velocities
+        state.vx = state.type.startsWith('vertical') ? 0 : (state.type==='horizontal' ? state.v0 : state.v0*Math.cos(deg2rad(state.angleDeg)));
+        state.vy = (state.type==='verticalDown' ? -state.v0 : (state.type==='verticalUp' ? state.v0 : state.v0*Math.sin(deg2rad(state.angleDeg)))) - state.g*state.t;
+
+        // ground collision
+        if(state.y <= 0){
+          state.y = 0;
+          state.running = false;
+        }
+        if(state.tracePath){
+          const last = state.path[state.path.length-1];
+          if(!last || Math.hypot(state.x-last.x, state.y-last.y) > 0.1){
+            state.path.push({x:state.x, y:state.y});
+          }
+        }
+      }
+      // update data UI
+      tVal.textContent = format(state.t,'s');
+      xVal.textContent = format(state.x,'m');
+      yVal.textContent = format(state.y,'m');
+      vxVal.textContent = format(state.vx,'m/s');
+      vyVal.textContent = format(state.vy,'m/s');
+    }
+
+    // Drawing
+    function render(){
+      const ctx = scene.getContext('2d');
+      const {pxPerM, groundYPx} = getScale();
+      ctx.clearRect(0,0,scene.width,scene.height);
+
+      // Sky gradient
+      const g = ctx.createLinearGradient(0,0,0,groundYPx);
+      g.addColorStop(0,'#0b1020');
+      g.addColorStop(1,'#0e1830');
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,scene.width,groundYPx);
+
+      // Ground
+      ctx.fillStyle = '#0a3';
+      ctx.fillRect(0,groundYPx,scene.width,scene.height-groundYPx);
+
+      // Axes (optional subtle grid)
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      for(let i=0;i<10;i++){
+        const y = groundYPx - i*50;
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(scene.width,y); ctx.stroke();
+      }
+
+      // Convert (x,y meters) to canvas coords
+      const pxX = state.x * pxPerM + 40*devicePixelRatio;
+      const pxY = groundYPx - state.y * pxPerM;
+
+      // Path
+      if(state.tracePath && state.path.length>1){
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const start = state.path[0];
+        ctx.moveTo(start.x*pxPerM + 40*devicePixelRatio, groundYPx - start.y*pxPerM);
+        for(const p of state.path){
+          ctx.lineTo(p.x*pxPerM + 40*devicePixelRatio, groundYPx - p.y*pxPerM);
+        }
+        ctx.stroke();
+      }
+
+      // Projectile
+      ctx.fillStyle = '#60a5fa';
+      ctx.beginPath();
+      ctx.arc(pxX, pxY, 8*devicePixelRatio, 0, Math.PI*2);
+      ctx.fill();
+
+      // Velocity vector
+      if(state.showVelVec){
+        drawVector(ctx, pxX, pxY, state.vx, state.vy, pxPerM, '#93c5fd', 'v');
+      }
+      // Components
+      if(state.showVelComp){
+        drawVector(ctx, pxX, pxY, state.vx, 0, pxPerM, '#f59e0b', 'vx');
+        drawVector(ctx, pxX, pxY, 0, state.vy, pxPerM, '#f472b6', 'vy');
+      }
+      // Acceleration vector (gravity downwards)
+      if(state.showAccVec){
+        drawVector(ctx, pxX, pxY, 0, -state.g, 12 /* scale smaller */, '#ef4444', 'g', true);
+      }
+    }
+
+    function drawVector(ctx, x, y, vx, vy, scale, color, label, fixedScale=false){
+      // scale vector for visibility
+      const factor = fixedScale ? scale : Math.max(12, Math.min(48, 24));
+      const lenX = vx * factor;
+      const lenY = -vy * factor; // invert Y for canvas
+      const tipX = x + lenX;
+      const tipY = y + lenY;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x,y);
+      ctx.lineTo(tipX, tipY);
+      ctx.stroke();
+
+      // Arrow head
+      const ang = Math.atan2(lenY, lenX);
+      const ah = 10*devicePixelRatio;
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(tipX - ah*Math.cos(ang - Math.PI/6), tipY - ah*Math.sin(ang - Math.PI/6));
+      ctx.lineTo(tipX - ah*Math.cos(ang + Math.PI/6), tipY - ah*Math.sin(ang + Math.PI/6));
+      ctx.lineTo(tipX, tipY);
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Label
+      ctx.fillStyle = color;
+      ctx.font = `${12*devicePixelRatio}px system-ui`;
+      ctx.fillText(label, tipX + 6, tipY - 6);
+    }
+
+    // Main loop
+    let last = performance.now();
+    function loop(now){
+      const dt = Math.min(0.05, (now - last)/1000);
+      last = now;
+      stepPhysics(dt);
+      render();
+      requestAnimationFrame(loop);
+    }
+    initMotion();
+    refreshLeds();
+    requestAnimationFrame(loop);
+  </script>
 </body>
 </html>
